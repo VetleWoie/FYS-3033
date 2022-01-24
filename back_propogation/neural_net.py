@@ -12,6 +12,26 @@ class Quadratic_cost():
         return np.dot(label-output,label-output)
     def derivative(self, label, output):
         return (output-label)
+
+class Dense():
+    def __init__(self, nodes, activation = Logistic()):
+        """
+        Nodes: Number of neurons in the layer
+        Activation: Instance of an activation function class:
+                    Needs to have defined both a __call__ method and
+                    a derivative method
+        """
+        self.nodes = nodes
+        self.activation = activation
+        #Initialize bias values
+        self.bias = np.random.rand(1,self.nodes)
+    
+    def _init_weights(self, prev_nodes):
+        self.weights = np.random.rand(self.nodes, prev_nodes)
+    
+    def classify(self, datapoint):
+        z = self.weights @ datapoint + self.bias
+
     
 class NeuralNet():
 
