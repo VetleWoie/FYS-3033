@@ -26,11 +26,11 @@ class NeuralNet():
     def classify(self, p) -> np.array:
         self.z = []
         self.a = []
-        self.z.append(p)
         self.a.append(p)
         for i,(w,b) in enumerate(zip(self.weights,self.bias), start=1):
-            self.z.append(w @ self.a[i-1] + b)
-            self.a.append(self.activation(self.z[i]))
+            z = w @ self.a[i-1] + b
+            self.z.append(z)
+            self.a.append(self.activation(z))
         return self.a[-1]
 
     def output_error(self, label):
@@ -49,6 +49,7 @@ class NeuralNet():
 
         print("A: ")
         for a in self.a:
+            print(a.shape)
             print(a)
             print(",")
         print()
@@ -67,22 +68,20 @@ class NeuralNet():
             delta = w.T @ error[i] * self.activation.derivative(z)
             error.append(delta)
         
+        print()
         print("Error:")
         for e in error:
+            print(e.shape)
             print(e)
             print(",")
 
-        print(self.weights[-2].shape)
-        # for i,z in enumerate(reversed(self.z[1:])):
-        #     if i:
-        #         print(f"Layer {i} Weight: {self.weights[-(i)].T.shape}, error: {error[i-1].shape} Activation Derivative: {self.activation.derivative(z)}")
-        #         error.append(self.weights[-(i)].T @ error[i-1] * self.activation.derivative(z))
-        #         print(f"Error: {error[-1]}")
-        #     else:
-        #         error.append(self.output_error(label))
-        #         print(f"Output error: {error[0].shape} Activation Derivative: {self.activation.derivative(z)}")
-        # return error
-
+        print(error[1].shape)
+        print(self.a[1].shape)
+        dcdw1 = np.outer(self.a[1], error[1])
+        print(dcdw1)
+        dcdw0  = np.outer(self.a[2], error[0])
+        print(dcdw0)
+        
     def train(self, training_set, training_label,epoch, batch_size, learning_rate) -> None:
         #Loop over all epochs
         for e in range(epoch):
