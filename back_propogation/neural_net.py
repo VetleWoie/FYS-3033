@@ -1,3 +1,4 @@
+from cv2 import dft
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -26,11 +27,42 @@ class Dense():
         #Initialize bias values
         self.bias = np.random.rand(1,self.nodes)
     
-    def _init_weights(self, prev_nodes):
-        self.weights = np.random.rand(self.nodes, prev_nodes)
+    def _init_weights(self, prev_outputs:int):
+        """
+        Initialize weights based on the number of outputs in the previous layer
+        
+        Paramaters:
+        prev_outputs: int
+        """
+        self.inputs = prev_outputs
+        self.weights = np.random.rand(self.nodes, prev_outputs)
     
-    def classify(self, datapoint):
-        z = self.weights @ datapoint + self.bias
+    def classify(self, prev_output):
+        """
+        Classify point based on previous output
+
+        Paramaters:
+        prev_output: numpy.ndarray
+        """
+        z = self.weights @ prev_output + self.bias
+
+    def __str__(self):
+        return f"{self.weights.shape}\n{self.weights}\n"
+
+class BetterNeuralNet():
+    def __init__(self,input_shape,layers, cost = Quadratic_cost()) -> None:
+        self.layers = layers
+
+        self.layers[0]._init_weights(input_shape)
+        for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
+            layer._init_weights(prevlayer.inputs)
+    
+    def __str__(self) -> str:
+        string = ""
+        for layer in self.layers:
+            string += str(layer)
+        return string
+
 
     
 class NeuralNet():
@@ -134,14 +166,16 @@ if __name__ == "__main__":
 
     trainingLabel = [-1,1,1,-1] 
 
-    nn = NeuralNet([2,2,1])
+    nn = BetterNeuralNet(2,[Dense(2), Dense(1)])
+    print(nn)
+    # nn = NeuralNet([2,2,1])
 
-    datapoint = trainingSet[0]
-    label = trainingLabel[0]
+    # datapoint = trainingSet[0]
+    # label = trainingLabel[0]
 
-    out = nn.classify(datapoint)
-    output_error = nn.output_error(label)
-    bp = nn.back_propagate(label)
+    # out = nn.classify(datapoint)
+    # output_error = nn.output_error(label)
+    # bp = nn.back_propagate(label)
 
 
     # print(f"Weights: {nn.weights[-1]}")
