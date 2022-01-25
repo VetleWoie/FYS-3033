@@ -1,21 +1,27 @@
-from cv2 import dft
+from multiprocessing.sharedctypes import Value
 import numpy as np
 from matplotlib import pyplot as plt
 
+class Step():
+    def __call__(self, x) -> int:
+        return -1 if x < 0 else 1
+
 class Logistic():
-    def __call__(self, x,a=10):
-        return 1/(1+np.exp(-a*x))
+    def __init__(self, a=10) -> None:
+        self.a = a
+    def __call__(self, x):
+        return 1/(1+np.exp(-self.a*x))
     def derivative(self, x,a=10) -> float:
         return self(x) - (1-self(x))
 
 class Quadratic_cost():
-    def __call__(self, label, output) -> float:
+    def __call__(self, output, label) -> float:
         return np.dot(label-output,label-output)
-    def derivative(self, label, output):
+    def derivative(self, output, label):
         return (output-label)
 
 class Dense():
-    def __init__(self, nodes, activation = Logistic()):
+    def __init__(self, nodes, learning_rate = 0.1, activation = Logistic()):
         """
         Nodes: Number of neurons in the layer
         Activation: Instance of an activation function class:
@@ -24,8 +30,12 @@ class Dense():
         """
         self.nodes = nodes
         self.activation = activation
+        self.learning_rate = learning_rate
         #Initialize bias values
-        self.bias = np.random.rand(1,self.nodes)
+        self.bias = np.random.rand(self.nodes,1)
+
+        self.counter = 0
+        self.delta_bias = np.zeros(self.bias.shape)
     
     def _init_weights(self, prev_outputs:int):
         """
@@ -35,7 +45,8 @@ class Dense():
         prev_outputs: int
         """
         self.inputs = prev_outputs
-        self.weights = np.random.rand(self.nodes, prev_outputs)
+        self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.nodes, prev_outputs))
+        self.delta_weights = np.zeros(self.weights.shape)
     
     def classify(self, prev_output):
         """
@@ -44,118 +55,99 @@ class Dense():
         Paramaters:
         prev_output: numpy.ndarray
         """
-        z = self.weights @ prev_output + self.bias
+        self.input = prev_output
+        self.v = self.weights @ prev_output + self.bias
+        self.y = self.activation(self.v)
+        return self.y
+    
+    def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
+        """
+        Calculate error in current layer based on either output cost or the error in the 
+        next layer.
+
+        Paramaters:
+            label: Known class of input datapoint
+            cost: Cost function used for measuring cost of network
+            next_error: Error in next layer
+            next_weights: Weights from next layer
+        """
+        if next_error is None and next_weights is None and cost is not None and label is not None:
+            #If layer is output layer calculate cost as output cost
+            self.error = cost.derivative(self.y, label) * self.activation.derivative(self.v)
+        elif next_error is not None and next_weights is not None:
+            #If layer is not output layer calculate error using the error in the next layer
+            self.error = next_weights.T @ next_error * self.activation.derivative(self.v)
+        elif cost is None or label is None:
+            #If missing cost function or label when calculating output error then raise an exeption
+            raise ValueError("Need cost function and label to calculate output error")
+        else:
+            #If missing weights or error from next layer when calculating error then raise an exeption
+            raise ValueError("Need both weights and error from the next layer to calculate error")
+        #Calculate update delta
+        self.delta_weights += self.error @ self.input.T
+        self.delta_bias += self.error
+        #Keep track of how many errors that have been calculated since last update
+        self.counter += 1
+        return self.error
+
+    def update_weights(self):
+        #Update weights using stocastic gradient descent
+        self.weights += self.weights - (self.learning_rate/self.counter) * self.delta_weights
+        self.bias += self.bias -(self.learning_rate/self.counter) * self.delta_bias
+        #Set delta values to zero before new learning batch
+        self.delta_bias = np.zeros(self.delta_bias.shape)
+        self.delta_weights = np.zeros(self.delta_weights.shape)
+        self.counter = 0
 
     def __str__(self):
-        return f"{self.weights.shape}\n{self.weights}\n"
+        return f"Weights: {self.weights.shape}\n{self.weights}\nBias:\n{self.bias}\n"
 
-class BetterNeuralNet():
+class Neural_Net():
     def __init__(self,input_shape,layers, cost = Quadratic_cost()) -> None:
         self.layers = layers
+        self.cost = cost
 
         self.layers[0]._init_weights(input_shape)
         for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
             layer._init_weights(prevlayer.inputs)
-    
+
+    def evaluate(self, datapoint):
+        """
+        Forward propagate the datapoint through all layers in the network
+
+        Paramaters:
+        datapoint: numpy.ndarray
+        """
+        #Evaluate input on first layer
+        out = self.layers[0].classify(datapoint)
+        #Forward propagate output through the rest of the layers
+        for layer in self.layers[1:]:
+            out = layer.classify(out)
+        return out
+
+    def back_propagate(self,label) -> None:
+        self.layers[-1].calculate_error(label=label,cost=self.cost)
+        for layer,nextlayer in zip(reversed(self.layers[:-1]),reversed(self.layers[1:])):
+            layer.calculate_error(next_error = nextlayer.error, next_weights = nextlayer.weights)
+
+    def update_weights(self) -> None:
+        for layer in self.layers:
+            layer.update_weights()
+
+    def print_errors(self):
+        for i,layer in enumerate(self.layers):
+            print(f"Error in layer {i}:")
+            print(layer.error)
+
     def __str__(self) -> str:
         string = ""
         for layer in self.layers:
             string += str(layer)
         return string
 
-
-    
-class NeuralNet():
-
-    def __init__(self, layers, activation = Logistic(), cost = Quadratic_cost()) -> None:
-        self.layers = layers
-        self.weights = [(np.random.rand(self.layers[i], self.layers[i-1])) for i in range(1,len(self.layers))]
-        self.bias = [np.random.rand(1,self.layers[d]) for d in self.layers]
-
-        self.activation = activation
-        self.cost = cost
-    
-    def classify(self, p) -> np.array:
-        self.z = []
-        self.a = []
-        self.a.append(p)
-        for i,(w,b) in enumerate(zip(self.weights,self.bias), start=1):
-            z = w @ self.a[i-1] + b
-            self.z.append(z)
-            self.a.append(self.activation(z))
-        return self.a[-1]
-
-    def output_error(self, label):
-        return self.cost.derivative(label, self.a[-1]) * self.activation.derivative(self.z[-1])
-
-    def back_propagate(self, label):
-        error = []
-        print("Label: ", label)
-        print(f"Num weights: {len(self.weights)}, num z: {len(self.z)}")
-
-        print("Z: ")
-        for z in self.z:
-            print(z)
-            print(",")
-        print()
-
-        print("A: ")
-        for a in self.a:
-            print(a.shape)
-            print(a)
-            print(",")
-        print()
-
-        print("w: ")
-        for w in reversed(self.weights):
-            print(w)
-            print(w.shape)
-            print(",")
-        print()
-
-        error.append(self.output_error(label))
-        print(f"Error: {error[0]}")
-        for i,(w,z) in enumerate(zip(reversed(self.weights), reversed(self.z[:-1]))):
-            print(i,w.shape,z.shape, error[i].shape)
-            delta = w.T @ error[i] * self.activation.derivative(z)
-            error.append(delta)
-        
-        print()
-        print("Error:")
-        for e in error:
-            print(e.shape)
-            print(e)
-            print(",")
-
-        print(error[1].shape)
-        print(self.a[1].shape)
-        dcdw1 = np.outer(self.a[1], error[1])
-        print(dcdw1)
-        dcdw0  = np.outer(self.a[2], error[0])
-        print(dcdw0)
-        
-    def train(self, training_set, training_label,epoch, batch_size, learning_rate) -> None:
-        #Loop over all epochs
-        for e in range(epoch):
-            cost = 0
-            num_batch = len(training_label) / batch_size
-            #Train on a batch of datapoints
-            for batch in range(num_batch):
-                print(f"Epoch: {e} Batch: {batch} ", end="")
-                #Loop over datapoints in batch
-                for i in range(batch_size):
-                    datapoint = training_set[i+e*i]
-                    label = training_label[i+e*i]
-                    #Classify datapoint and compute cost
-                    cost += self.cost_function(self.classify(datapoint))
-                    #Propagate error backwards in network
-                    self.back_propagate(datapoint, label)
-                #Calculate avarage cost
-                cost *= 1/(2*batch_size)
-                print(f"Cost = {cost}")
-
 if __name__ == "__main__":
-    np.set_printoptions(precision=2)
+    np.random.seed(0)
+    # np.set_printoptions(precision=2)
 
     trainingSet = [
         np.array([[0],[0]]),
@@ -164,24 +156,31 @@ if __name__ == "__main__":
         np.array([[1],[1]]),
     ]
 
-    trainingLabel = [-1,1,1,-1] 
+    trainingLabel = [
+        np.array([[-1]]),
+        np.array([[1]]),
+        np.array([[1]]),
+        np.array([[-1]]),
+    ]
 
-    nn = BetterNeuralNet(2,[Dense(2), Dense(1)])
+    nn = Neural_Net(2,[Dense(2), Dense(1)])
     print(nn)
-    # nn = NeuralNet([2,2,1])
-
-    # datapoint = trainingSet[0]
-    # label = trainingLabel[0]
-
-    # out = nn.classify(datapoint)
-    # output_error = nn.output_error(label)
-    # bp = nn.back_propagate(label)
-
-
-    # print(f"Weights: {nn.weights[-1]}")
-
-
-    # print(f"Input: {datapoint}, Label: {label}")
-    # print(f"Output: {out}")
-    # print(f"Output Error: {output_error}")
-    # print(f"Back Prop result: {bp}")
+    idx = 3
+    datapoint = trainingSet[idx]
+    label = trainingLabel[idx]    
+    
+    step = Step()
+    for i in range(1000):
+        correct = 0
+        for d,l in zip(trainingSet, trainingLabel):
+            out = nn.evaluate(d)
+            if step(out) == l:
+                print(f"Correct guess: Guess: {out} actuall: {l}")
+                correct += 1
+            else:
+                print(f"Wrong guess: Guess: {out} actuall: {l}")
+            nn.back_propagate(l)
+        nn.update_weights()
+        print(f"Num correct {correct}/4")
+        print()
+    
