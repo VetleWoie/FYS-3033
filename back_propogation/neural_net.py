@@ -1,3 +1,4 @@
+from audioop import bias
 from multiprocessing.sharedctypes import Value
 import numpy as np
 from matplotlib import pyplot as plt
@@ -7,12 +8,12 @@ class Step():
         return -1 if x < 0 else 1
 
 class Logistic():
-    def __init__(self, a=10) -> None:
+    def __init__(self, a=1) -> None:
         self.a = a
     def __call__(self, x):
         return 1/(1+np.exp(-self.a*x))
-    def derivative(self, x,a=10) -> float:
-        return self(x) - (1-self(x))
+    def derivative(self, x) -> float:
+        return np.exp(-self.a*x)/(1+np.exp(-self.a*x))**2#self(x) - (1-self(x))
 
 class Quadratic_cost():
     def __call__(self, output, label) -> float:
@@ -21,7 +22,7 @@ class Quadratic_cost():
         return (output-label)
 
 class Dense():
-    def __init__(self, nodes, learning_rate = 0.1, activation = Logistic()):
+    def __init__(self, nodes, learning_rate = 0.1, activation = Logistic(), weights = None, bias = None):
         """
         Nodes: Number of neurons in the layer
         Activation: Instance of an activation function class:
@@ -32,10 +33,14 @@ class Dense():
         self.activation = activation
         self.learning_rate = learning_rate
         #Initialize bias values
-        self.bias = np.random.rand(self.nodes,1)
 
         self.counter = 0
+        self.bias = bias
+        if self.bias is None:
+            self.bias = np.random.rand(self.nodes,1)
         self.delta_bias = np.zeros(self.bias.shape)
+
+        self.weights = weights
     
     def _init_weights(self, prev_outputs:int):
         """
@@ -45,7 +50,8 @@ class Dense():
         prev_outputs: int
         """
         self.inputs = prev_outputs
-        self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.nodes, prev_outputs))
+        if self.weights is None:
+            self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.nodes, prev_outputs))
         self.delta_weights = np.zeros(self.weights.shape)
     
     def classify(self, prev_output):
@@ -57,7 +63,11 @@ class Dense():
         """
         self.input = prev_output
         self.v = self.weights @ prev_output + self.bias
+        print("v:")
+        print(self.v)
         self.y = self.activation(self.v)
+        print("y:")
+        print(self.y)
         return self.y
     
     def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
@@ -73,9 +83,16 @@ class Dense():
         """
         if next_error is None and next_weights is None and cost is not None and label is not None:
             #If layer is output layer calculate cost as output cost
+            # print("cost derivative: ",cost.derivative(self.y, label))
+            # print("Activation derivative: ", self.activation.derivative(self.v))
             self.error = cost.derivative(self.y, label) * self.activation.derivative(self.v)
+            # print("output error:", self.error)
         elif next_error is not None and next_weights is not None:
             #If layer is not output layer calculate error using the error in the next layer
+            # print("w*e:")
+            # print(next_weights.T @ next_error)
+            # print("Activation derivative:")
+            # print(self.activation.derivative(self.v))
             self.error = next_weights.T @ next_error * self.activation.derivative(self.v)
         elif cost is None or label is None:
             #If missing cost function or label when calculating output error then raise an exeption
@@ -92,8 +109,8 @@ class Dense():
 
     def update_weights(self):
         #Update weights using stocastic gradient descent
-        self.weights += self.weights - (self.learning_rate/self.counter) * self.delta_weights
-        self.bias += self.bias -(self.learning_rate/self.counter) * self.delta_bias
+        self.weights = self.weights - (self.learning_rate/self.counter) * self.delta_weights
+        self.bias = self.bias -(self.learning_rate/self.counter) * self.delta_bias
         #Set delta values to zero before new learning batch
         self.delta_bias = np.zeros(self.delta_bias.shape)
         self.delta_weights = np.zeros(self.delta_weights.shape)
@@ -157,18 +174,31 @@ if __name__ == "__main__":
     ]
 
     trainingLabel = [
-        np.array([[-1]]),
+        np.array([[0]]),
         np.array([[1]]),
         np.array([[1]]),
-        np.array([[-1]]),
+        np.array([[0]]),
     ]
 
-    nn = Neural_Net(2,[Dense(2), Dense(1)])
+    nn = Neural_Net(2,
+        [
+            Dense(2,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
+            Dense(1, weights=np.array([[1,1]]),bias=np.array([[0]]))
+        ])
     print(nn)
+
     idx = 3
     datapoint = trainingSet[idx]
     label = trainingLabel[idx]    
-    
+    # print("Datapoint:")
+    # print(datapoint)
+    # print("label: ", label)
+    # print("Evaluating network")
+    # out = nn.evaluate(datapoint)
+    # print("Y2:", out)
+    # nn.back_propagate(label)
+    # nn.print_errors()
+    # nn.update_weights()
     step = Step()
     for i in range(1000):
         correct = 0
