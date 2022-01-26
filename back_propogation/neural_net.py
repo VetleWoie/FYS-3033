@@ -126,7 +126,7 @@ class Neural_Net():
 
         self.layers[0]._init_weights(input_shape)
         for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
-            layer._init_weights(prevlayer.inputs)
+            layer._init_weights(prevlayer.nodes)
 
     def evaluate(self, datapoint):
         """
