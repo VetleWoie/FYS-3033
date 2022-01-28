@@ -1,5 +1,3 @@
-from audioop import bias
-from multiprocessing.sharedctypes import Value
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -19,7 +17,7 @@ class Quadratic_cost():
     def __call__(self, output, label) -> float:
         return np.dot(label-output,label-output)
     def derivative(self, output, label):
-        return (output-label)
+        return (label-output)
 
 class Dense():
     def __init__(self, nodes, learning_rate = 0.1, activation = Logistic(), weights = None, bias = None):
@@ -38,7 +36,6 @@ class Dense():
         self.bias = bias
         if self.bias is None:
             self.bias = np.random.rand(self.nodes,1)
-        self.delta_bias = np.zeros(self.bias.shape)
 
         self.weights = weights
     
@@ -52,7 +49,6 @@ class Dense():
         self.inputs = prev_outputs
         if self.weights is None:
             self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.nodes, prev_outputs))
-        self.delta_weights = np.zeros(self.weights.shape)
     
     def classify(self, prev_output):
         """
@@ -83,8 +79,10 @@ class Dense():
         """
         if next_error is None and next_weights is None and cost is not None and label is not None:
             #If layer is output layer calculate cost as output cost
-            # print("cost derivative: ",cost.derivative(self.y, label))
-            # print("Activation derivative: ", self.activation.derivative(self.v))
+            print("cost derivative: ")
+            print(cost.derivative(self.y, label))
+            print("Activation derivative: ")
+            print(self.activation.derivative(self.v))
             self.error = cost.derivative(self.y, label) * self.activation.derivative(self.v)
             # print("output error:", self.error)
         elif next_error is not None and next_weights is not None:
@@ -100,21 +98,23 @@ class Dense():
         else:
             #If missing weights or error from next layer when calculating error then raise an exeption
             raise ValueError("Need both weights and error from the next layer to calculate error")
+        
+        print("error:")
+        print(self.error)
         #Calculate update delta
-        self.delta_weights += self.error @ self.input.T
-        self.delta_bias += self.error
+        self.delta_weights = self.error @ self.input.T
+        self.delta_bias = np.sum(self.error)
+        print("delta weight:")
+        print(self.delta_weights)
+        print("delta bias")
+        print(self.delta_bias)
         #Keep track of how many errors that have been calculated since last update
-        self.counter += 1
         return self.error
 
     def update_weights(self):
         #Update weights using stocastic gradient descent
-        self.weights = self.weights - (self.learning_rate/self.counter) * self.delta_weights
-        self.bias = self.bias -(self.learning_rate/self.counter) * self.delta_bias
-        #Set delta values to zero before new learning batch
-        self.delta_bias = np.zeros(self.delta_bias.shape)
-        self.delta_weights = np.zeros(self.delta_weights.shape)
-        self.counter = 0
+        self.weights = self.weights - (self.learning_rate/4) * self.delta_weights
+        self.bias = self.bias -(self.learning_rate/4) * self.delta_bias
 
     def __str__(self):
         return f"Weights: {self.weights.shape}\n{self.weights}\nBias:\n{self.bias}\n"
@@ -182,35 +182,36 @@ if __name__ == "__main__":
 
     nn = Neural_Net(2,
         [
-            Dense(2,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
-            Dense(1, weights=np.array([[1,1]]),bias=np.array([[0]]))
+            Dense(2,learning_rate=1,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
+            Dense(1,learning_rate=1,weights=np.array([[1,1]]),bias=np.array([[0]]))
         ])
     print(nn)
 
-    idx = 3
-    datapoint = trainingSet[idx]
-    label = trainingLabel[idx]    
-    # print("Datapoint:")
-    # print(datapoint)
-    # print("label: ", label)
-    # print("Evaluating network")
-    # out = nn.evaluate(datapoint)
-    # print("Y2:", out)
-    # nn.back_propagate(label)
-    # nn.print_errors()
-    # nn.update_weights()
-    step = Step()
-    for i in range(1000):
-        correct = 0
-        for d,l in zip(trainingSet, trainingLabel):
-            out = nn.evaluate(d)
-            if step(out) == l:
-                print(f"Correct guess: Guess: {out} actuall: {l}")
-                correct += 1
-            else:
-                print(f"Wrong guess: Guess: {out} actuall: {l}")
-            nn.back_propagate(l)
-        nn.update_weights()
-        print(f"Num correct {correct}/4")
+    print()
+    print("Input:")
+    p = np.array([[1,1,0,0],[1,0,1,0]])
+    label = np.array([[0,1,1,0]])
+    print(p.shape)
+    print(p)
+    for i in range(100):
         print()
-    
+        print("Evaluating:")
+        out = nn.evaluate(p)
+        print()
+        print("Final output:")
+        print(out)
+        print()
+        print("Propagating error backwards:")
+        nn.back_propagate(label)
+        print()
+        print("Update weights")
+        nn.update_weights()
+        print("New network")
+        print(nn)
+
+    print(p[:,0].reshape(2,1))
+    print("Evaluating:")
+    out = nn.evaluate(p)
+    print()
+    print("Final output:")
+    print(out)
