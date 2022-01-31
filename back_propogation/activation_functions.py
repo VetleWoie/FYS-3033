@@ -10,4 +10,4 @@ class Logistic():
     def __call__(self, x):
         return 1/(1+np.exp(-self.a*x))
     def derivative(self, x) -> float:
-        return self(x) * (1-self(x))
+        return self.a*self(x) * (1-self(x))
