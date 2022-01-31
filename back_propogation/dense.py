@@ -85,7 +85,7 @@ class Dense():
         print(self.error)
         #Calculate update delta
         self.delta_weights = self.error @ self.input.T
-        self.delta_bias = np.sum(self.error)
+        self.delta_bias = np.sum(self.error,axis=1,keepdims=True)
         print("delta weight:")
         print(self.delta_weights)
         print("delta bias")
@@ -100,3 +100,4 @@ class Dense():
 
     def __str__(self):
         return f"Weights: {self.weights.shape}\n{self.weights}\nBias:\n{self.bias}\n"
+ 

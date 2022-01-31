@@ -1,4 +1,3 @@
-import imp
 import numpy as np
 from dense import Dense
 from cost_functions import Quadratic_cost
@@ -79,7 +78,7 @@ if __name__ == "__main__":
     label = np.array([[0,1,1,0]])
     print(p.shape)
     print(p)
-    for i in range(100):
+    for i in range(10000):
         print()
         print("Evaluating:")
         out = nn.evaluate(p)
