@@ -41,11 +41,7 @@ class Dense():
         """
         self.input = prev_output
         self.v = self.weights @ prev_output + self.bias
-        print("v:")
-        print(self.v)
         self.y = self.activation(self.v)
-        print("y:")
-        print(self.y)
         return self.y
     
     def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
@@ -61,18 +57,9 @@ class Dense():
         """
         if next_error is None and next_weights is None and cost is not None and label is not None:
             #If layer is output layer calculate cost as output cost
-            print("cost derivative: ")
-            print(cost.derivative(self.y, label))
-            print("Activation derivative: ")
-            print(self.activation.derivative(self.v))
             self.error = cost.derivative(self.y, label) * self.activation.derivative(self.v)
-            # print("output error:", self.error)
         elif next_error is not None and next_weights is not None:
             #If layer is not output layer calculate error using the error in the next layer
-            # print("w*e:")
-            # print(next_weights.T @ next_error)
-            # print("Activation derivative:")
-            # print(self.activation.derivative(self.v))
             self.error = next_weights.T @ next_error * self.activation.derivative(self.v)
         elif cost is None or label is None:
             #If missing cost function or label when calculating output error then raise an exeption
@@ -81,15 +68,9 @@ class Dense():
             #If missing weights or error from next layer when calculating error then raise an exeption
             raise ValueError("Need both weights and error from the next layer to calculate error")
         
-        print("error:")
-        print(self.error)
         #Calculate update delta
         self.delta_weights = self.error @ self.input.T
         self.delta_bias = np.sum(self.error,axis=1,keepdims=True)
-        print("delta weight:")
-        print(self.delta_weights)
-        print("delta bias")
-        print(self.delta_bias)
         #Keep track of how many errors that have been calculated since last update
         return self.error
 
