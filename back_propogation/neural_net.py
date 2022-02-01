@@ -1,8 +1,39 @@
-import numpy as np
-from dense import Dense
 from cost_functions import Quadratic_cost
-from activation_functions import Logistic, Step
-from matplotlib import pyplot as plt
+
+class Layer():
+    def __init__(self, shape) -> None:
+        self.output_shape = shape
+
+    def _init_weights(self, prev_outputs:int):
+        raise NotImplementedError
+
+    def evaluate(self, prev_output):
+        raise NotImplementedError
+    
+    def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
+        raise NotImplementedError
+
+    def update_weights(self):
+        raise NotImplementedError
+ 
+
+class Input(Layer):
+    def __init__(self, shape) -> None:
+        super().__init__(shape)
+
+    def _init_weights(self, prev_outputs:int):
+        pass
+
+    def evaluate(self,prev_output):
+        return prev_output
+    
+    def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
+        pass
+
+    def update_weights(self):
+        pass
+
+
 
 class Neural_Net():
     def __init__(self,input_shape,layers, cost = Quadratic_cost()) -> None:
@@ -11,7 +42,7 @@ class Neural_Net():
 
         self.layers[0]._init_weights(input_shape)
         for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
-            layer._init_weights(prevlayer.nodes)
+            layer._init_weights(prevlayer.output_shape)
 
     def evaluate(self, datapoint):
         """
@@ -21,10 +52,10 @@ class Neural_Net():
         datapoint: numpy.ndarray
         """
         #Evaluate input on first layer
-        out = self.layers[0].classify(datapoint)
+        out = self.layers[0].evaluate(datapoint)
         #Forward propagate output through the rest of the layers
         for layer in self.layers[1:]:
-            out = layer.classify(out)
+            out = layer.evaluate(out)
         return out
 
     def back_propagate(self,label) -> None:
@@ -46,57 +77,3 @@ class Neural_Net():
         for layer in self.layers:
             string += str(layer)
         return string
-
-if __name__ == "__main__":
-    np.random.seed(0)
-    # np.set_printoptions(precision=2)
-
-    trainingSet = [
-        np.array([[0],[0]]),
-        np.array([[1],[0]]),
-        np.array([[0],[1]]),
-        np.array([[1],[1]]),
-    ]
-
-    trainingLabel = [
-        np.array([[0]]),
-        np.array([[1]]),
-        np.array([[1]]),
-        np.array([[0]]),
-    ]
-
-    nn = Neural_Net(2,
-        [
-            Dense(2,learning_rate=1,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
-            Dense(1,learning_rate=1,weights=np.array([[1,1]]),bias=np.array([[0]]))
-        ])
-    print(nn)
-
-    print()
-    print("Input:")
-    p = np.array([[1,1,0,0],[1,0,1,0]])
-    label = np.array([[0,1,1,0]])
-    print(p.shape)
-    print(p)
-    for i in range(10000):
-        print()
-        print("Evaluating:")
-        out = nn.evaluate(p)
-        print()
-        print("Final output:")
-        print(out)
-        print()
-        print("Propagating error backwards:")
-        nn.back_propagate(label)
-        print()
-        print("Update weights")
-        nn.update_weights()
-        print("New network")
-        print(nn)
-
-    print(p[:,0].reshape(2,1))
-    print("Evaluating:")
-    out = nn.evaluate(p)
-    print()
-    print("Final output:")
-    print(out)
