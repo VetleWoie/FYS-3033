@@ -1,5 +1,40 @@
 from cost_functions import Quadratic_cost
 
+class Layer():
+    def __init__(self, shape) -> None:
+        self.output_shape = shape
+
+    def _init_weights(self, prev_outputs:int):
+        raise NotImplementedError
+
+    def evaluate(self, prev_output):
+        raise NotImplementedError
+    
+    def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
+        raise NotImplementedError
+
+    def update_weights(self):
+        raise NotImplementedError
+ 
+
+class Input(Layer):
+    def __init__(self, shape) -> None:
+        super().__init__(shape)
+
+    def _init_weights(self, prev_outputs:int):
+        pass
+
+    def evaluate(self,prev_output):
+        return prev_output
+    
+    def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
+        pass
+
+    def update_weights(self):
+        pass
+
+
+
 class Neural_Net():
     def __init__(self,input_shape,layers, cost = Quadratic_cost()) -> None:
         self.layers = layers
@@ -7,7 +42,7 @@ class Neural_Net():
 
         self.layers[0]._init_weights(input_shape)
         for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
-            layer._init_weights(prevlayer.nodes)
+            layer._init_weights(prevlayer.output_shape)
 
     def evaluate(self, datapoint):
         """
@@ -17,10 +52,10 @@ class Neural_Net():
         datapoint: numpy.ndarray
         """
         #Evaluate input on first layer
-        out = self.layers[0].classify(datapoint)
+        out = self.layers[0].evaluate(datapoint)
         #Forward propagate output through the rest of the layers
         for layer in self.layers[1:]:
-            out = layer.classify(out)
+            out = layer.evaluate(out)
         return out
 
     def back_propagate(self,label) -> None:

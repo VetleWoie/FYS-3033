@@ -1,7 +1,8 @@
 import numpy as np
 from activation_functions import Logistic
+from neural_net import Layer
 
-class Dense():
+class Dense(Layer):
     def __init__(self, nodes, learning_rate = 0.1, activation = Logistic(), weights = None, bias = None):
         """
         Nodes: Number of neurons in the layer
@@ -9,7 +10,7 @@ class Dense():
                     Needs to have defined both a __call__ method and
                     a derivative method
         """
-        self.nodes = nodes
+        super().__init__(nodes)
         self.activation = activation
         self.learning_rate = learning_rate
         #Initialize bias values
@@ -17,7 +18,7 @@ class Dense():
         self.counter = 0
         self.bias = bias
         if self.bias is None:
-            self.bias = np.random.rand(self.nodes,1)
+            self.bias = np.random.rand(self.output_shape,1)
 
         self.weights = weights
     
@@ -30,9 +31,9 @@ class Dense():
         """
         self.inputs = prev_outputs
         if self.weights is None:
-            self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.nodes, prev_outputs))
+            self.weights = np.random.default_rng().uniform(low=-1, high=1,size=(self.output_shape, prev_outputs))
     
-    def classify(self, prev_output):
+    def evaluate(self, prev_output):
         """
         Classify point based on previous output
 
@@ -75,6 +76,9 @@ class Dense():
         return self.error
 
     def update_weights(self):
+        """
+        Update weights and biases based on gradients.
+        """
         #Update weights using stocastic gradient descent
         self.weights = self.weights - (self.learning_rate/4) * self.delta_weights
         self.bias = self.bias -(self.learning_rate/4) * self.delta_bias
