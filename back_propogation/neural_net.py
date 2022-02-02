@@ -59,11 +59,20 @@ class Neural_Net():
         return out
 
     def back_propagate(self,label) -> None:
+        """
+        Back propagate error through network layers
+
+        Paramaters:
+        label: np.ndarray with training labels
+        """
         self.layers[-1].calculate_error(label=label,cost=self.cost)
         for layer,nextlayer in zip(reversed(self.layers[:-1]),reversed(self.layers[1:])):
             layer.calculate_error(next_error = nextlayer.error, next_weights = nextlayer.weights)
 
     def update_weights(self) -> None:
+        """
+        Update weights in the network based on back propogation.
+        """
         for layer in self.layers:
             layer.update_weights()
 
