@@ -1,7 +1,7 @@
 
 from neural_net import *
 import numpy as np
-from dense import Dense
+from layers.dense import Dense
 from matplotlib import pyplot as plt
 
 #Training set and labels

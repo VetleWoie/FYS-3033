@@ -1,5 +1,5 @@
 import numpy as np
-from activation_functions import Logistic
+from activation.activation_functions import Logistic
 from neural_net import Layer
 
 class Dense(Layer):

@@ -1,4 +1,4 @@
-from cost_functions import Quadratic_cost
+from cost.cost_functions import Quadratic_cost
 
 class Layer():
     def __init__(self, shape) -> None:

@@ -1,7 +1,7 @@
 from neural_net import Neural_Net, Input
-from dense import Dense
-from cost_functions import Quadratic_cost
-from activation_functions import Step
+from layers.dense import Dense
+from cost.cost_functions import Quadratic_cost
+from activation.activation_functions import Step
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.datasets import make_moons
