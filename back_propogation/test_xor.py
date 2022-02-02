@@ -1,40 +1,26 @@
 
-from turtle import color
-from neural_net import *
+from neural_net import Neural_Net
+from layers.basic_layers import Input
 import numpy as np
+from layers.dense import Dense
 from matplotlib import pyplot as plt
-from sklearn.datasets import make_moons
-# np.set_printoptions(precision=2)
 
-trainingSet = [
-    np.array([[0],[0]]),
-    np.array([[1],[0]]),
-    np.array([[0],[1]]),
-    np.array([[1],[1]]),
-]
+#Training set and labels
+p = np.array([[1,1,0,0],[1,0,1,0]])
+label = np.array([[0,1,1,0]])
 
-trainingLabel = [
-    np.array([[0]]),
-    np.array([[1]]),
-    np.array([[1]]),
-    np.array([[0]]),
-]
-
-nn = Neural_Net(2,
-    [
-        Dense(2,learning_rate=1,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
-        Dense(1,learning_rate=1,weights=np.array([[1,1]]),bias=np.array([[0]]))
-    ])
+#Setup nerual network
 nn = Neural_Net(2,
 [
-    Dense(2,learning_rate=1),#,learning_rate=1,weights=np.array([[0,1],[1,0]]), bias=np.array([[0], [0]])), 
-    Dense(1,learning_rate=1)#,learning_rate=1,weights=np.array([[1,1]]),bias=np.array([[0]]))
+    Dense(2,learning_rate=1),
+    Dense(1,learning_rate=1)
 ])
-print(nn)
 
+#Setup plots for animation
 fig, ax = plt.subplots(1,2)
-for l,(i,j) in zip(trainingLabel,trainingSet):
-    ax[0].scatter(i,j, color = "green" if l else "orange")
+#plot training set
+for i,l in enumerate(label[0]):
+    ax[0].scatter(p[:,i][0],p[:,i][1], color = "green" if l else "orange")
 
 w = nn.layers[0].weights
 b = nn.layers[0].bias
@@ -48,8 +34,6 @@ ax[0].set_xlim([-0.5, 1.5])
 ax[0].set_ylim([-0.5, 1.5])
 plt.pause(0.1)
 
-p = np.array([[1,1,0,0],[1,0,1,0]])
-label = np.array([[0,1,1,0]])
 
 cf = Quadratic_cost()
 cost = []
@@ -63,9 +47,8 @@ for i in range(4000):
         ax[1].cla()
 
         ax[1].plot(np.arange(len(cost)), cost)
-        for l,(i,j) in zip(trainingLabel,trainingSet):
-            ax[0].scatter(i,j, color = "green" if l else "orange")
-
+        for i,l in enumerate(label[0]):
+            ax[0].scatter(p[:,i][0],p[:,i][1], color = "green" if l else "orange")
         w = nn.layers[0].weights
         b = nn.layers[0].bias
 
@@ -76,12 +59,4 @@ for i in range(4000):
         ax[0].set_xlim([-0.5, 1.5])
         ax[0].set_ylim([-0.5, 1.5])
         plt.pause(0.1)
-    
-
-print(p[:,0].reshape(2,1))
-print("Evaluating:")
-out = nn.evaluate(p)
-print()
-print("Final output:")
-print(out)
 plt.show()

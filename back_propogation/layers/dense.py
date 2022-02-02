@@ -1,6 +1,6 @@
 import numpy as np
-from activation_functions import Logistic
-from neural_net import Layer
+from activation.activation_functions import Logistic
+from .basic_layers import Layer
 
 class Dense(Layer):
     def __init__(self, nodes, learning_rate = 0.1, activation = Logistic(), weights = None, bias = None):
