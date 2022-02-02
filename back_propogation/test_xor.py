@@ -1,5 +1,6 @@
 
-from neural_net import *
+from neural_net import Neural_Net
+from layers.basic_layers import Input
 import numpy as np
 from layers.dense import Dense
 from matplotlib import pyplot as plt

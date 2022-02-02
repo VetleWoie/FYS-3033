@@ -1,4 +1,5 @@
-from neural_net import Neural_Net, Input
+from neural_net import Neural_Net
+from layers.basic_layers import Input
 from layers.dense import Dense
 from cost.cost_functions import Quadratic_cost
 from activation.activation_functions import Step
