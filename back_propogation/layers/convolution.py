@@ -1,4 +1,5 @@
 from basic_layers import Layer
+from scipy.signal import convolve2d
 import numpy as np
 
 class Conv2D(Layer):
@@ -26,7 +27,10 @@ class Conv2D(Layer):
         return np.pad(input,((self.kernel_size[0]//2,self.kernel_size[0]//2),(self.kernel_size[1]//2,self.kernel_size[1]//2)))
 
     def evaluate(self, prev_output):
-        pass
+        out = []
+        for input in prev_output:
+            out.append(convolve2d(input, self.kernels[0], mode='same'))
+        return np.array(out)
     
     def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
         raise NotImplementedError
@@ -35,15 +39,19 @@ class Conv2D(Layer):
         raise NotImplementedError
 
 if __name__=="__main__":
-    l = Conv2D((5,3),1, num_kernels=1)
+    np.set_printoptions(precision=2)
+    l = Conv2D((3,3),1, num_kernels=1)
     for k in l.kernels:
         print(k)
 
     print("Original Image")
-    image = np.ones(shape=(5,5))
+    image = np.array([np.ones(shape=(5,5))]
+    )
     l._init_weights(image.shape)
     print(image)
 
     print("Padded Image")
     padded_image = l.pad_zeros(image)
     print(padded_image)
+    convolved_image = l.evaluate(image)
+    print(convolved_image)
