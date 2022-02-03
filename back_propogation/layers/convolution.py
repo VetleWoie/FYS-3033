@@ -22,8 +22,11 @@ class Conv2D(Layer):
             #If padding is disabled then output will be less than input
             self.output_shape = (prev_outputs.shape[0]-self.kernel_size[0]//2, prev_outputs.shape[1]-self.kernel_size[1]//2, self.num_kernels)
 
+    def pad_zeros(self, input):
+        return np.pad(input,((self.kernel_size[0]//2,self.kernel_size[0]//2),(self.kernel_size[1]//2,self.kernel_size[1]//2)))
+
     def evaluate(self, prev_output):
-        raise NotImplementedError
+        pass
     
     def calculate_error(self, label=None,cost=None,next_error = None, next_weights = None):
         raise NotImplementedError
@@ -32,6 +35,15 @@ class Conv2D(Layer):
         raise NotImplementedError
 
 if __name__=="__main__":
-    l = Conv2D((3,3),1, num_kernels=3)
+    l = Conv2D((5,3),1, num_kernels=1)
     for k in l.kernels:
         print(k)
+
+    print("Original Image")
+    image = np.ones(shape=(5,5))
+    l._init_weights(image.shape)
+    print(image)
+
+    print("Padded Image")
+    padded_image = l.pad_zeros(image)
+    print(padded_image)
