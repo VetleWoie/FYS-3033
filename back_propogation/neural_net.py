@@ -1,4 +1,5 @@
 from cost.cost_functions import Quadratic_cost
+from progress_bar import progress_bar
 
 class Neural_Net():
     def __init__(self,input_shape,layers, cost = Quadratic_cost()) -> None:
@@ -8,6 +9,37 @@ class Neural_Net():
         self.layers[0]._init_weights(input_shape)
         for prevlayer,layer in zip(self.layers[:-1],self.layers[1:]):
             layer._init_weights(prevlayer.output_shape)
+    
+    def fit(self,epochs, batch_size, training, testing=None):
+        if testing is not None:
+            test_set = testing[0]
+            test_labels = testing[1]
+        training_set = training[0]
+        training_labels = training[1]
+
+        test_cost = []
+        training_cost = []
+
+        for epoch in range(epochs):
+            print("Epoch: ", epoch)
+            progress_bar(epoch, epochs, show_total=True, show_percentage=False)
+            correct = 0
+            training_out = self.evaluate(training_set)
+
+            training_cost.append(self.cost(training_out, training_labels)[0,0]/len(training_set))
+            if testing is not None:
+                test_out = self.evaluate(test_set)
+                test_cost.append(self.cost(test_out, test_labels)[0,0]/len(test_set))
+                
+            for i in range(0,len(training_set),batch_size):
+                print(i)
+                start = i
+                stop = start+batch_size
+                batch = training_set[start:stop]
+                batch_label = training_labels[start:stop]
+                out = self.evaluate(batch)
+                self.back_propagate(batch_label)
+                self.update_weights()
 
     def evaluate(self, datapoint):
         """
