@@ -82,19 +82,9 @@ class FullyConnectedLayer(Layers):
         dx: Loss derivitive that that is passed on to layers below
         store: Store input to layer for backward passs
         """
-
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        print(self.b.shape, delta.shape)
-        dx = delta#np.sum(delta.T,axis=1,keepdims=True)#np.random.random_sample(self.store.shape)
-        self.dw = np.random.random_sample(self.w.shape)
-        self.db = np.random.random_sample(self.b.shape)
-        print(self.db.shape)
-        # exit()
-        ######################################################
-        ######################################################
-        ######################################################
+        dx = delta @ self.w.T
+        self.dw = self.store.T @ delta
+        self.db = np.sum(delta,axis=0)
 
         # Upades the weights and bias using the computed gradients
         self.w -= update_param(self.dw)
