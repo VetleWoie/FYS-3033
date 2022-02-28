@@ -1,5 +1,5 @@
 import numpy as np
-import utils
+import utils 
 
 
 def update_param(dx, learning_rate=1e-2):
@@ -61,12 +61,14 @@ class FullyConnectedLayer(Layers):
         store: Store input to layer for backward pass.
         """
         self.store = x
+        #Make sure to flatten input in case input is from a conv or maxpool layer
+        reshaped_x = x.reshape(x.shape[0], -1)
 
         ######################################################
         ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
         ######################################################
         
-        out = x @ self.w + self.b
+        out = reshaped_x @ self.w + self.b
         
         ######################################################
         ######################################################
@@ -82,14 +84,17 @@ class FullyConnectedLayer(Layers):
         dx: Loss derivitive that that is passed on to layers below
         store: Store input to layer for backward passs
         """
+        #Flatten input
+        reshaped_x = self.store.reshape(self.store.shape[0], -1)
+
         dx = delta @ self.w.T
-        self.dw = self.store.T @ delta
+        self.dw = reshaped_x.T @ delta
         self.db = np.sum(delta,axis=0)
 
         # Upades the weights and bias using the computed gradients
         self.w -= update_param(self.dw)
         self.b -= update_param(self.db)
-        return dx
+        return dx.reshape(self.store.shape)
 
 
 class ConvolutionalLayer(Layers):
@@ -110,7 +115,7 @@ class ConvolutionalLayer(Layers):
         self.b = np.random.normal(0, 0.1, (filtersize[0],))
         self.dw = None
         self.db = None
-
+    
     def forward(self, x):
         """
         Forward pass of convolutional layer.
@@ -120,17 +125,15 @@ class ConvolutionalLayer(Layers):
         store_col: Save input tensor on matrix from for backward pass.
         """
         N, C, H, W = x.shape
+        F, C, HH, WW = self.filtersize 
         
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        self.store = x
         Wout = int((W - self.filtersize[3]+2*self.pad)/self.stride+1)
         Hout = int((H - self.filtersize[2]+2*self.pad)/self.stride+1)
-        out = np.random.random_sample((N, self.filtersize[0], Hout, Wout))
-        ######################################################
-        ######################################################
-        ######################################################
+        
+        self.store = (utils.im2col_indices(x, HH, WW, self.pad, self.stride),(N,C,H,W))
+        col_w = self.w.reshape(F, HH*WW*C)
+        out = col_w@self.store[0] + np.expand_dims(self.b,axis=1)
+        out = out.reshape(F,Hout, Wout, N).transpose(3,0,1,2)
 
         return out
 
@@ -144,13 +147,26 @@ class ConvolutionalLayer(Layers):
         ######################################################
         ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
         ######################################################
-        x = self.store
-        dx = np.random.random_sample(self.store.shape)
-        self.dw = np.random.random_sample(self.w.shape)
-        self.db = np.random.random_sample(self.b.shape)
-        ######################################################
-        ######################################################
-        ######################################################
+        x,(N, C, H, W) = self.store
+        F, C, HH, WW = self.filtersize 
+
+        Wout = int((W - self.filtersize[3]+2*self.pad)/self.stride+1)
+        Hout = int((H - self.filtersize[2]+2*self.pad)/self.stride+1)
+        
+        #Update bias
+        self.db = np.sum(delta,axis=(0,2,3)).reshape(F)
+
+        #Create column of weights
+        col_w = self.w.reshape(F, HH*WW*C)
+        delta_flat = delta.transpose(1,2,3,0).reshape(F,N*Wout*Hout)
+
+        #Find delta input
+        dx = col_w.T @ delta_flat
+        dx = utils.col2im_indices(dx, (N,C,H,W), HH, WW, self.pad, self.stride)
+
+        #Find delta weights
+        self.dw = (delta_flat @ x.T).reshape(self.w.shape)
+        self.dw = self.dw.reshape(self.w.shape)
 
         # Upades the weights and bias using the computed gradients
         self.w -= update_param(self.dw)
