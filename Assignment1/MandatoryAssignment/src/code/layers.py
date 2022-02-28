@@ -63,16 +63,8 @@ class FullyConnectedLayer(Layers):
         self.store = x
         #Make sure to flatten input in case input is from a conv or maxpool layer
         reshaped_x = x.reshape(x.shape[0], -1)
-
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
         
         out = reshaped_x @ self.w + self.b
-        
-        ######################################################
-        ######################################################
-        ######################################################
 
         return out
 
@@ -156,9 +148,11 @@ class ConvolutionalLayer(Layers):
         #Update bias
         self.db = np.sum(delta,axis=(0,2,3)).reshape(F)
 
+        #Reshape delta so that it can be used in vectorized convolution
+        delta_flat = delta.transpose(1,2,3,0).reshape(F,N*Wout*Hout)
+
         #Create column of weights
         col_w = self.w.reshape(F, HH*WW*C)
-        delta_flat = delta.transpose(1,2,3,0).reshape(F,N*Wout*Hout)
 
         #Find delta input
         dx = col_w.T @ delta_flat
@@ -166,9 +160,8 @@ class ConvolutionalLayer(Layers):
 
         #Find delta weights
         self.dw = (delta_flat @ x.T).reshape(self.w.shape)
-        self.dw = self.dw.reshape(self.w.shape)
 
-        # Upades the weights and bias using the computed gradients
+        # Updates the weights and bias using the computed gradients
         self.w -= update_param(self.dw)
         self.b -= update_param(self.db)
 
@@ -197,15 +190,21 @@ class MaxPoolingLayer(Layers):
         W, W_out: Input and output width
         """
         N, C, H, W = x.shape
-        
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        self.store = x
-        out = np.random.random_sample((N, C, H//self.pool_r, W//self.pool_c))
-        ######################################################
-        ######################################################
-        ######################################################
+
+        #Calculate output shape
+        Hout = (H - self.pool_r) // self.stride + 1
+        Wout = (W - self.pool_c) // self.stride + 1
+
+        #Reshape all channels into individuall images
+        x = x.reshape(N * C, 1, H, W)
+        #Create a list of (pool_c*pool_r, C*H*W) which can be used to find max
+        x_col = utils.im2col_indices(x, self.pool_c,self.pool_r, 0, self.stride)
+        idx = np.argmax(x_col, axis=0)
+
+        self.store = (idx, x_col.shape, (N,C,H,W))
+
+        #Reshape column back into output image
+        out = np.reshape(x_col[idx, range(len(idx))],(Hout, Wout, N, C)).transpose(2,3,0,1)
 
         return out
 
@@ -216,16 +215,14 @@ class MaxPoolingLayer(Layers):
         dX: gradient of loss wrt. input (of size NxCxHxW)
         """
 
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        x = self.store
-        dx = np.random.random_sample(x.shape)
-        ######################################################
-        ######################################################
-        ######################################################
+        idx, x_col_shape, (N,C,H,W) = self.store
+        zeros = np.zeros(x_col_shape)
 
-        return dx
+        delta_flat = delta.transpose(2,3,0,1).reshape(-1)
+        zeros[idx, range(len(idx))] = delta_flat
+        dx = utils.col2im_indices(zeros, (N*C, 1,H,W), self.pool_c, self.pool_r, 0, self.stride)
+
+        return dx.reshape(N,C,H,W)
 
 
 class LSTMLayer(Layers):
