@@ -253,15 +253,29 @@ class LSTMLayer(Layers):
         cache: A tuple where you can store anything that might be useful for the backward pass
         """
         
-	    ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        next_h = np.random.random_sample(h.shape)
-        next_c = np.random.random_sample(c.shape)
+        #Reshape X so that it matches h
+        x = x.reshape(h.shape[0],-1)
+        #Concatenate earlier weights
+        hx = np.concatenate((h,x), 1)
+        #Concatenate weight matricies
+        whwx = np.concatenate((self.wh, self.wx), 0)
+        
+        #Multiply input and weight matrix
+        out = (hx @ whwx + self.b).T
+
+        #Sigmoid on forget, output and update gates
+        sout = sigmoid(out[:3*self.dim_hid,:])
+        update_gate = sout[:self.dim_hid,:].T
+        forget_gate = sout[self.dim_hid:2*self.dim_hid, :].T
+        output_gate = sout[2*self.dim_hid:3*self.dim_hid, :].T
+        #Tanh, on update
+        tanout = np.tanh(out[3*self.dim_hid:,:]).T
+        #Calculate C based on gate outputs
+        next_c = c * forget_gate + (update_gate * tanout)
+        #Calculate output based on C and outputgate
+        next_h = output_gate*np.tanh(next_c)
+
         cache = (next_h, next_c)
-        ######################################################
-        ######################################################
-        ######################################################
 
         return next_h, next_c, cache
 
