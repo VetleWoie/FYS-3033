@@ -115,6 +115,10 @@ class ConvolutionalLayer(Layers):
         x_col: Input tensor reshaped to matrix form.
         store_shape: Save shape of input tensor for backward pass.
         store_col: Save input tensor on matrix from for backward pass.
+
+        This implementation is heavily based upon the implementation found in 
+        https://github.com/parasdahal/deepnet/blob/master/deepnet/layers.py
+        However, this is mostly for optimization purposes
         """
         N, C, H, W = x.shape
         F, C, HH, WW = self.filtersize 
@@ -135,6 +139,10 @@ class ConvolutionalLayer(Layers):
         
         delta: gradients from layer above
         dx: gradients that are propagated to layer below
+
+        This implementation is heavily based upon the implementation found in 
+        https://github.com/parasdahal/deepnet/blob/master/deepnet/layers.py
+        However, this is mostly for optimization purposes
         """
         ######################################################
         ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
@@ -275,7 +283,7 @@ class LSTMLayer(Layers):
         #Calculate output based on C and outputgate
         next_h = output_gate*np.tanh(next_c)
 
-        cache = (next_h, next_c)
+        cache = (update_gate, forget_gate, output_gate, tanout, next_h, next_c)
 
         return next_h, next_c, cache
 
@@ -299,19 +307,36 @@ class LSTMLayer(Layers):
         db: Gradient of loss wrt. bias vector
         """
         hn, x, h, cn, c, cache = store
+        update_gate, forget_gate, output_gate, tanout,next_h, next_c = cache
+        np.zeros((4*self.dim_hid, update_gate.shape[1]))
 
-        ######################################################
-        ######## REPLACE NEXT PART WITH YOUR SOLUTION ########
-        ######################################################
-        dx = np.random.random_sample(x.shape)
-        dh = np.random.random_sample(h.shape)
-        dc = np.random.random_sample(c.shape)
-        dwh = np.random.random_sample(self.wh.shape)
-        dwx = np.random.random_sample(self.wx.shape)
-        db = np.random.random_sample(self.b.shape)
-        ######################################################
-        ######################################################
-        ######################################################
+        #Calculate dcn based on dcn in output and stored state
+        dcn = delta_c.copy()
+        dcn += delta_h * output_gate * (1-np.tanh(next_c)**2)
+        #Derivative of output gate based on state and dcn in output
+        doutput = np.tanh(next_c) * delta_h
+        dforget_gate = dcn * c
+        dc = dcn * forget_gate
+        dupdate_gate = dcn  * tanout
+        dtanout = dcn * update_gate
+        
+        dgates = np.concatenate(
+            (
+            (1 - update_gate) * update_gate * dupdate_gate, 
+            (1 - forget_gate) * forget_gate * dforget_gate, 
+            (1 - output_gate) * output_gate * doutput, 
+            (1 - np.square(tanout)) * dtanout
+            ), axis=1).T
+
+        whwx = np.concatenate((self.wh, self.wx), 0)
+
+        dh = (self.wh @ dgates).T
+        dx = (self.wx @ dgates).T
+
+        dwh = (dgates @ h).T
+        dwx = (dgates @ x).T
+
+        db = np.sum(dgates, axis=1)
 
         return dx, dh, dc, dwh, dwx, db
 

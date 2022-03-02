@@ -2,6 +2,7 @@
 import layers
 import networks
 import numpy as np
+from matplotlib import pyplot as plt
 
 fc_input = 16*4*4# TODO: INSERT NUMBER HERE
 
@@ -60,6 +61,8 @@ class CNN(networks.Network):
         Training function. Creates batches of size
         batch_size and trains for epochs number of epochs.
         """
+        fig,ax = plt.subplots(1,1)
+        epoch_loss = []
         idx_list = list(self.make_batches_cnn(x.shape[0], batch_size))
         for epoch in range(epochs):
             loss_av = []
@@ -68,6 +71,13 @@ class CNN(networks.Network):
                 self.backward_pass(loss_derivative)
                 loss_av.append(loss)
             print("Epoch:", epoch, "Loss:", np.mean(loss_av))
+            epoch_loss.append(np.mean(loss_av))
+        ax.plot(np.arange(len(epoch_loss)), epoch_loss)
+        ax.set_xlabel("Epochs")
+        ax.set_ylabel("Loss")
+        ax.set_title("Loss epoch graph")
+        plt.savefig("loss.pdf")
+        plt.close(fig)
 
     def test(self, x):
         """

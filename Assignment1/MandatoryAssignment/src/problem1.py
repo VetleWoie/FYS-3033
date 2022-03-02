@@ -17,9 +17,9 @@ gradient_checks.check_gradient_pool()
 gradient_checks.check_gradient_relu()
 gradient_checks.check_gradient_fc()
 
-input("If the gradients look ok, press Enter to continue training the model...")
+# input("If the gradients look ok, press Enter to continue training the model...")
 
-x_tr, y_tr, x_te, y_te = load_mnist(plot=True)
+x_tr, y_tr, x_te, y_te = load_mnist(plot=False)
 
 BS = 500
 
@@ -30,4 +30,5 @@ out = model.test(x_te)
 pred = np.argmax(out, axis=1)
 
 plot_mnist_results(x_te, pred, y_te)
+
 print("ACC: ", np.sum(pred == y_te)/float(500))

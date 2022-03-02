@@ -19,7 +19,7 @@ gradient_checks.check_gradient_wordembedding()
 gradient_checks.check_gradient_recurrent_step()
 gradient_checks.check_gradient_rnn()
 
-input("If the gradients look ok, press Enter to continue training the model...")
+# input("If the gradients look ok, press Enter to continue training the model...")
 
 length = 20000
 if dataset == 'shake':
