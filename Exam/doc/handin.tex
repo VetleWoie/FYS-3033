@@ -1,0 +1,67 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+% \usepackage[numbers]{natbib}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+% \usepackage{hyperref}
+\usepackage{listings}
+% \usepackage{xcolor}
+
+\title{FYS-3033 Exam}
+\author{Canditate}
+\date{2022}
+ 
+\begin{document}
+
+\maketitle
+\section{Assignment 1}
+\subsection*{a)}
+Cross entropy is a measurment of how diffrent two probability distributions are.
+\begin{equation}
+    \begin{split}
+        H(z,y) &= -\sum_{i=0}^1 E_{yi}\log(z_i)\\
+        &= -\left(1\cdot\log(z_0)+0\cdot\log(z_1)\right)\\
+        &= -\log(z_0)\\    
+    \end{split}
+\end{equation}
+
+\subsection*{b)}
+If $z$ are not stochastic then we cannot guarantee that the cross entropy function is defined. Any values of $z <= 0$ will not be defined by the cross entropy function. Even if we limit $z > 0$, the derivative of the cross entropy function approaches $0$ when $z$ gets large, which will inhibit learning.
+
+\subsection*{c)}
+\subsection*{d)}
+
+Without regularization:
+\begin{equation}
+    \begin{split}
+        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) = 0\\
+    \end{split}
+\end{equation}
+
+With $\ell^2$-regularization
+\begin{equation}
+    \begin{split}
+        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) + ||\mathbf{z}||^2_2 &= 0 + \mathbf{z}^\top\mathbf{z}\\
+                                                                          &= (z_0z_1)^2
+    \end{split}
+\end{equation}
+
+With $\ell^1$-regularization
+\begin{equation}
+    \begin{split}
+        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) + ||\mathbf{z}||_1 &= 0 + \sum_i |w_i|\\
+                                                                        &= z_0 + z_1
+    \end{split}
+\end{equation}
+
+\subsection*{e)}
+
+\section{Assignment 2}
+\section{Assignment 3}
+
+\section{Appendix} 
+% \lstinputlisting[language=Python]{./layers.py}    
+\end{document}
