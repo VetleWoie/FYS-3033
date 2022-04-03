@@ -1,2 +1,8 @@
 *.pyc
 */__pycache__
+*.aux
+*.fdb_latexmk
+*.log
+handin.pdf
+*synctex.gz
+*.fls
