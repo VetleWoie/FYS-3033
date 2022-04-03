@@ -37,14 +37,14 @@ If $z$ are not stochastic then we cannot guarantee that the cross entropy functi
 Without regularization:
 \begin{equation}
     \begin{split}
-        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) = 0\\
+        argmin_\mathbf{z} CE(\mathbf{z}; \mathbf{y}) = 0\\
     \end{split}
 \end{equation}
 
 With $\ell^2$-regularization
 \begin{equation}
     \begin{split}
-        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) + ||\mathbf{z}||^2_2 &= 0 + \mathbf{z}^\top\mathbf{z}\\
+        argmin_\mathbf{z} CE(\mathbf{z}; \mathbf{y}) + ||\mathbf{z}||^2_2 &= 0 + \mathbf{z}^\top\mathbf{z}\\
                                                                           &= (z_0z_1)^2
     \end{split}
 \end{equation}
@@ -52,7 +52,7 @@ With $\ell^2$-regularization
 With $\ell^1$-regularization
 \begin{equation}
     \begin{split}
-        argmin_\mathbf{z} CE(\mathbf{z}: \mathbf{y}) + ||\mathbf{z}||_1 &= 0 + \sum_i |w_i|\\
+        argmin_\mathbf{z} CE(\mathbf{z}; \mathbf{y}) + ||\mathbf{z}||_1 &= 0 + \sum_i |w_i|\\
                                                                         &= z_0 + z_1
     \end{split}
 \end{equation}
