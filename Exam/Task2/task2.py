@@ -5,6 +5,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 from keras.applications.vgg16 import VGG16, decode_predictions, preprocess_input
 from keras import preprocessing
+
 PRECODEDIR = "problem2"
 TESTIAMGES = "test_images"
 VALIDATIONIMAGES = "validation_images"
@@ -79,7 +80,7 @@ if __name__ == "__main__":
     images, labels = load_validation_images(preprocess=True)
     ids, word_dir = load_synset_words()
 
-    # show_validation_images(images, labels)
+    show_validation_images(images, labels)
 
     vgg16 = tf.keras.applications.vgg16.VGG16(
     include_top=True,
@@ -98,4 +99,3 @@ if __name__ == "__main__":
     pred = np.array(decode_predictions(pred, top=1)).reshape(95,3)
     correct = (pred[:,0] == labels[:,1])
     print(f"Accuracy: {correct.sum()}/{len(correct)} = {correct.sum()/len(correct)}")
-    exit()
