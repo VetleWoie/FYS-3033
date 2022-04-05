@@ -43,7 +43,7 @@ if __name__ == "__main__":
     reg = 0.01
 
     img = np.zeros((1,224,224,3), dtype=np.float32)
-    for i in range(150):
+    for i in range(10):
         tensor = tf.convert_to_tensor(img)
         with tf.GradientTape() as tape:
             tape.watch(tensor)
@@ -55,11 +55,12 @@ if __name__ == "__main__":
         img += grads[0]
     
     #Unprocess image
+    img = np.array(img)
     img += 1
     img *= 127.5
-    img /= 255
-    plt.savefig("Goldfishmaybe.png")
+    img = img.astype(dtype=int)
     plt.imshow(img[0])
+    plt.savefig("Goldfishmaybe.png")
     plt.show()
 
 
