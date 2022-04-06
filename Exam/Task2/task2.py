@@ -20,10 +20,10 @@ def load_test_images():
     x = []
     for filename in filenames:
         filename= filename
-        img = np.array(preprocessing.image.load_img(f"{PRECODEDIR}/{VALIDATIONIMAGES}/{filename}"))#,target_size=(224,224)))
+        img = np.array(preprocessing.image.load_img(f"{PRECODEDIR}/{TESTIMAGES}/{filename}"))#,target_size=(224,224)))
         img = preprocessing.image.smart_resize(img, (224,224))
         x.append(img)
-    return np.asarray(x)
+    return np.asarray(x), filenames
 
 def isotropic_reshape(img, shape):
     #Reshape smallest axis to wanted size
@@ -104,8 +104,28 @@ def validation_accuracy(model):
     print(f"Accuracy: {correct.sum()}/{len(correct)} = {correct.sum()/len(correct)}")
     return correct.sum()/len(correct)
 
-def compute_saliency_map(image, show = False, savefig = True):
+def predict_on_test_image(model):
+    images, filenames = load_test_images()
+    preds = model.predict(images)
+    preds = np.array(decode_predictions(preds, top=5))
+    for pred, filename in zip(preds, filenames):
+        print(f"Predictions for {filename}:")
+        for p in pred:
+            print(p)
+        print()
+    return images, filenames, preds
+    
 
+def compute_saliency_maps(model, show = False, savefig = True):
+    images, filenames, preds = predict_on_test_image(model)
+
+    for img, pred in zip(images, preds):
+        class_number = 0
+        with tf.GradientTape as tape:
+            tape.watch(img)
+            score = model.predict(img)[:,class_number]
+        grads = tape.gradient(score)
+        print()
 
 
 
@@ -113,6 +133,7 @@ if __name__ == "__main__":
     vgg16 = load_model()
     vgg16.compile()
     print(vgg16.summary())
-    validation_accuracy(vgg16)
+    # validation_accuracy(vgg16)
+    predict_on_test_image(vgg16)
 
     
