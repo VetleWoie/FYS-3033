@@ -14,6 +14,13 @@ VALIDATIONIMAGES = "validation_images"
 VALIDATIONFILES = "val.txt"
 SYNSETWORDS = "synset_words.txt"
 
+def logtransform(c, image):
+    '''
+    Log transforms an image
+    image: Array like object
+    c: float
+    '''
+    return c * np.log(1 + image)
 
 def load_test_images():
     filenames  = next(os.walk(f"{PRECODEDIR}/{TESTIMAGES}"))[2]
@@ -22,6 +29,7 @@ def load_test_images():
         filename= filename
         img = np.array(preprocessing.image.load_img(f"{PRECODEDIR}/{TESTIMAGES}/{filename}"))#,target_size=(224,224)))
         img = preprocessing.image.smart_resize(img, (224,224))
+        img = preprocess_input(img)
         x.append(img)
     return np.asarray(x), filenames
 
@@ -97,7 +105,6 @@ def load_model():
 
 def validation_accuracy(model):
     images, labels = load_validation_images(preprocess=True)
-    ids, word_dir = load_synset_words()
     pred = model.predict(images)
     pred = np.array(decode_predictions(pred, top=1)).reshape(95,3)
     correct = (pred[:,0] == labels[:,1])
@@ -114,19 +121,35 @@ def predict_on_test_image(model):
             print(p)
         print()
     return images, filenames, preds
-    
+
+def unprocess_image(img):
+    mean = [103.939, 116.779, 123.68]
+    img[..., 0] += mean[0]
+    img[..., 1] += mean[1]
+    img[..., 2] += mean[2]
+    img = img[..., ::-1]
+    img = img.astype(int)
+    return img
 
 def compute_saliency_maps(model, show = False, savefig = True):
     images, filenames, preds = predict_on_test_image(model)
-
-    for img, pred in zip(images, preds):
-        class_number = 0
-        with tf.GradientTape as tape:
-            tape.watch(img)
-            score = model.predict(img)[:,class_number]
-        grads = tape.gradient(score)
-        print()
-
+    ids, word_dir = load_synset_words()
+    ids = np.array(ids)
+    for filename,(img, pred) in zip(filenames,zip(images, preds)):
+        class_number = np.where(ids == pred[0][0])[0][0]
+        img = np.expand_dims(img, axis=0)
+        tensor = tf.convert_to_tensor(img)
+        with tf.GradientTape() as tape:
+            tape.watch(tensor)
+            score = model(tensor)[:,class_number]
+        grads = tape.gradient(score, tensor)
+        if show or savefig:
+            fig, ax = plt.subplots(1,2)
+            ax[0].set_title(f"{filename}")
+            ax[0].imshow(unprocess_image(img[0]))
+            grads = np.max(grads[0], axis=2)
+            ax[1].imshow(np.array(grads))
+            plt.show()
 
 
 if __name__ == "__main__":
@@ -135,5 +158,5 @@ if __name__ == "__main__":
     print(vgg16.summary())
     # validation_accuracy(vgg16)
     predict_on_test_image(vgg16)
-
+    compute_saliency_maps(vgg16)
     
