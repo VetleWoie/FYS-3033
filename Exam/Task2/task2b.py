@@ -9,7 +9,31 @@ from keras import backend
 from keras.regularizers import L2
 from keras.losses import categorical_crossentropy
 from scipy.ndimage import gaussian_filter
+def logtransform(c, image):
+    '''
+    Log transforms an image
+    image: Array like object
+    c: float
+    '''
+    return c * np.log(1 + image)
 
+def maptoKbit(image, k):
+    '''
+    Maps image to k bits
+    image: Array like object
+    k: Number of bits to be used
+    '''
+    return (image/np.max(image)) * (2**k-1)
+
+def unprocess_image(img):
+    mean = [103.939, 116.779, 123.68]
+    img[..., 0] += mean[0]
+    img[..., 1] += mean[1]
+    img[..., 2] += mean[2]
+    img = img[..., ::-1]
+    img = img.astype(int)
+    return img
+    
 def class_model_visualisation(model, 
                             class_number,
                             num_iterations=1000,
@@ -21,8 +45,9 @@ def class_model_visualisation(model,
                             reg_class=L2,
                             learning_rate=1,
                             reg_param=0.01):
-    # img = np.random.rand(1,224,224,3)*2-1
-    img = np.zeros((1,224,224,3), dtype=np.float32)
+    img = np.random.randint(0,255,(1,224,224,3))
+    img = preprocess_input(img)
+    # img = np.zeros((1,224,224,3), dtype=np.float32)
 
     reg = reg_class(reg_param)
     for i in range(num_iterations):
@@ -65,14 +90,15 @@ if __name__ == "__main__":
     classes=1000,
     classifier_activation=None)
 
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=True, save_image=False)
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=True, save_image=False)
+    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=200,apply_gausian=False, show_image=True, save_image=False)
+    exit()
+    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
 
-    class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=True, save_image=False)
-    class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=True, save_image=False)
+    class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=False, save_image=False)
+    class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
 
-    class_model_visualisation(vgg16,659,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=True, save_image=False)
-    class_model_visualisation(vgg16,659,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=True, save_image=False)
+    class_model_visualisation(vgg16,659,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=False, save_image=False)
+    class_model_visualisation(vgg16,659,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
     exit()
     reg = 0.01
     l2 = L2(reg)
