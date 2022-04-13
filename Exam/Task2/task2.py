@@ -6,6 +6,8 @@ from PIL import Image
 from matplotlib import pyplot as plt
 from keras.applications.vgg16 import VGG16, decode_predictions, preprocess_input
 from keras import preprocessing
+from keras import layers
+import keras
 import os
 
 PRECODEDIR = "problem2"
@@ -94,7 +96,7 @@ def show_validation_images(images, classes, duration = 0.3):
     plt.close(fig)
 
 def load_model():
-    return tf.keras.applications.vgg16.VGG16(
+    vgg16 = tf.keras.applications.vgg16.VGG16(
     include_top=True,
     weights='imagenet',
     input_tensor=None,
@@ -102,6 +104,61 @@ def load_model():
     pooling=None,
     classes=1000,
     classifier_activation='softmax')
+    print(vgg16.summary())
+    weights = vgg16.get_weights()
+    print(len(weights))
+
+    model = tf.keras.Sequential()
+    # Block 1
+    model.add(layers.Conv2D(
+        64, (3, 3),input_shape=(224,224,3), activation='relu', padding='same', name='block1_conv1'))
+    model.add(layers.Conv2D(
+        64, (3, 3), activation='relu', padding='same', name='block1_conv2'))
+    model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool'))
+
+    # Block 2
+    model.add(layers.Conv2D(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv1'))
+    model.add(layers.Conv2D(
+        128, (3, 3), activation='relu', padding='same', name='block2_conv2'))
+    model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool'))
+
+    # Block 3
+    model.add(layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv1'))
+    model.add(layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv2'))
+    model.add(layers.Conv2D(
+        256, (3, 3), activation='relu', padding='same', name='block3_conv3'))
+    model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool'))
+
+    # Block 4
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv1'))
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv2'))
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block4_conv3'))
+    model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool'))
+
+    # Block 5
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv1'))
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv2'))
+    model.add(layers.Conv2D(
+        512, (3, 3), activation='relu', padding='same', name='block5_conv3'))
+    model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool'))
+
+    # Classification block
+    model.add(layers.Flatten(name='flatten'))
+    model.add(layers.Dense(4096, activation='relu', name='fc1'))
+    model.add(layers.Dense(4096, activation='relu', name='fc2'))
+    model.add(layers.Dense(1000, activation="softmax",
+                     name='predictions'))
+    
+    model.set_weights(vgg16.get_weights())
+    return model
 
 def validation_accuracy(model):
     images, labels = load_validation_images(preprocess=True)
@@ -131,10 +188,23 @@ def unprocess_image(img):
     img = img.astype(int)
     return img
 
-def compute_saliency_maps(model, show = False, savefig = True):
+@tf.custom_gradient
+def guided_relu(x):
+    def grad(dy):
+        return tf.cast(dy>0, np.float32) * tf.cast(x>0, np.float32) * dy
+    return tf.nn.relu(x), grad
+
+def compute_saliency_maps(model, show = False, savefig = True, guided = False):
     images, filenames, preds = predict_on_test_image(model)
     ids, word_dir = load_synset_words()
     ids = np.array(ids)
+
+    if guided:
+        for layer in model.layers:
+            if hasattr(layer, "activation"):
+                if layer.activation == keras.activations.relu:
+                    layer.activation = guided_relu
+
     for filename,(img, pred) in zip(filenames,zip(images, preds)):
         class_number = np.where(ids == pred[0][0])[0][0]
         img = np.expand_dims(img, axis=0)
@@ -158,5 +228,5 @@ if __name__ == "__main__":
     print(vgg16.summary())
     # validation_accuracy(vgg16)
     predict_on_test_image(vgg16)
-    compute_saliency_maps(vgg16)
+    compute_saliency_maps(vgg16, guided=True)
     
