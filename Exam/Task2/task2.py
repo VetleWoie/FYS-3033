@@ -150,10 +150,13 @@ def load_model():
         512, (3, 3), activation='relu', padding='same', name='block5_conv3'))
     model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool'))
 
-    # Classification block
+    # Classification block with dropout layers
     model.add(layers.Flatten(name='flatten'))
+    model.add(layers.Dropout(0.2))
     model.add(layers.Dense(4096, activation='relu', name='fc1'))
+    model.add(layers.Dropout(0.5))
     model.add(layers.Dense(4096, activation='relu', name='fc2'))
+    model.add(layers.Dropout(0.5))
     model.add(layers.Dense(1000, activation="softmax",
                      name='predictions'))
     
@@ -172,14 +175,11 @@ def predict_on_test_image(model):
     images, filenames = load_test_images()
     preds = model.predict(images)
     preds = np.array(decode_predictions(preds, top=5))
-    for pred, filename in zip(preds, filenames):
-        print(f"Predictions for {filename}:")
-        for p in pred:
-            print(p)
-        print()
+    
     return images, filenames, preds
 
 def unprocess_image(img):
+    #Unprocess image after imagenet preprocessing
     mean = [103.939, 116.779, 123.68]
     img[..., 0] += mean[0]
     img[..., 1] += mean[1]
@@ -191,42 +191,101 @@ def unprocess_image(img):
 @tf.custom_gradient
 def guided_relu(x):
     def grad(dy):
+        #Remove all negative gradients
         return tf.cast(dy>0, np.float32) * tf.cast(x>0, np.float32) * dy
+    #Return regular forward pass of relu, but guided relus gradient function
     return tf.nn.relu(x), grad
 
-def compute_saliency_maps(model, show = False, savefig = True, guided = False):
+def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = True, out_dir="./Figures"):
+    #Make a prediction on all test images
     images, filenames, preds = predict_on_test_image(model)
+    #Load all synset words
     ids, word_dir = load_synset_words()
     ids = np.array(ids)
+    #Calculate uncertainty of guesses on test images
+    uncertainties = calculate_uncertainty(model, images, k=k)
 
+    #Create copy of model with guided backpropogation
     if guided:
-        for layer in model.layers:
+        guided_relu_model = keras.models.clone_model(model)
+        guided_relu_model.compile()
+        for layer in guided_relu_model.layers:
             if hasattr(layer, "activation"):
                 if layer.activation == keras.activations.relu:
                     layer.activation = guided_relu
 
-    for filename,(img, pred) in zip(filenames,zip(images, preds)):
+    #Ugliest for loop in the world
+    for uncertainty,(filename,(img, pred)) in zip(uncertainties,zip(filenames,zip(images, preds))):
+        #Extract uncertaint measurments
+        new_pred = []
+        for i,p in enumerate(pred):
+            class_number = np.where(ids == p[0])[0][0]
+            new_pred.append(np.append(p, (uncertainty[0][class_number],uncertainty[1][class_number])))
+
+        #Find top prediction of image
+        pred = np.array(new_pred)
         class_number = np.where(ids == pred[0][0])[0][0]
         img = np.expand_dims(img, axis=0)
         tensor = tf.convert_to_tensor(img)
+
+        #Compute saliancy map on image and top prediction
         with tf.GradientTape() as tape:
             tape.watch(tensor)
             score = model(tensor)[:,class_number]
-        grads = tape.gradient(score, tensor)
+        unguided_grads = tape.gradient(score, tensor)
+
+        #Compute saliancy maps using guided backpropogation
+        if guided:
+            with tf.GradientTape() as tape:
+                tape.watch(tensor)
+                score = guided_relu_model(tensor)[:,class_number]
+            guided_grads = tape.gradient(score, tensor)
+        #Create figure
         if show or savefig:
-            fig, ax = plt.subplots(1,2)
-            ax[0].set_title(f"{filename}")
-            ax[0].imshow(unprocess_image(img[0]))
-            grads = np.max(grads[0], axis=2)
-            ax[1].imshow(np.array(grads))
-            plt.show()
+            fig, ax = plt.subplots(2,2)
+            for axis in ax:
+                for a in axis:
+                    a.axis("off")
+            ax[0][0].set_title(f"{filename}")
+            ax[0][0].imshow(unprocess_image(img[0]))
+            ax[0][1].axis('tight')
+            ax[0][1].set_title("Top 5 Class scores")
+            ax[0][1].table(cellText=pred[:,1:],colLabels=["Predictions", "Score", f"Avarage {k}", f"Uncertainty"], loc='center')      
+            unguided_grads = np.max(unguided_grads[0], axis=2)
+            ax[1][0].set_title(f"Unguided backprop")
+            ax[1][0].imshow(np.array(unguided_grads))
+            if guided:
+                guided_grads = np.max(guided_grads[0], axis=2)
+                ax[1][1].set_title(f"Guided backprop")
+                ax[1][1].imshow(np.array(guided_grads))
+
+            if savefig:
+                plt.savefig(f"{out_dir}/{filename}_k{k}_saliancy_uncertainty.pdf")
+            if show:
+                plt.show()
+            plt.close(fig)
+
+def calculate_uncertainty(model, images, k=500):
+    data = []
+    for img in images:
+        preds = []
+        for i in range(k):
+            pred = model(np.expand_dims(img, axis=0),training=True)
+            preds.append(np.array(pred).reshape((-1)))
+        preds = np.array(preds)
+        mean = np.mean(preds,axis=0)
+        var = np.var(preds,axis=0)
+        data.append((mean, var))
+    return data
+
 
 
 if __name__ == "__main__":
+    #https://towardsdatascience.com/monte-carlo-dropout-7fd52f8b6571
     vgg16 = load_model()
     vgg16.compile()
     print(vgg16.summary())
     # validation_accuracy(vgg16)
-    predict_on_test_image(vgg16)
-    compute_saliency_maps(vgg16, guided=True)
+    #predict_on_test_image(vgg16)
+    compute_saliency_maps(vgg16,k=1000,show=False, guided=True)
     
