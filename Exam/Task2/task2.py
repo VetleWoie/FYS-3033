@@ -208,11 +208,11 @@ def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = Tr
     #Create copy of model with guided backpropogation
     if guided:
         guided_relu_model = keras.models.clone_model(model)
-        guided_relu_model.compile()
         for layer in guided_relu_model.layers:
             if hasattr(layer, "activation"):
                 if layer.activation == keras.activations.relu:
                     layer.activation = guided_relu
+        guided_relu_model.compile()
 
     #Ugliest for loop in the world
     for uncertainty,(filename,(img, pred)) in zip(uncertainties,zip(filenames,zip(images, preds))):
@@ -287,5 +287,5 @@ if __name__ == "__main__":
     print(vgg16.summary())
     # validation_accuracy(vgg16)
     #predict_on_test_image(vgg16)
-    compute_saliency_maps(vgg16,k=1000,show=False, guided=True)
+    compute_saliency_maps(vgg16,k=10,show=True, savefig=False, guided=True)
     
