@@ -165,44 +165,41 @@ if __name__ == "__main__":
                  (1,{"batch_norm":True, "dropout":True,"l2":True},"Time distributed VGG 11 with batchnorm, dropout and l2"),
                 ]
 
-    for dt,m_arg, title in model_list:
+    dt,m_arg, title = model_list[int(sys.argv[1])]
 
-        if dt:
-            m = create_time_distributed_model(batch_norm=m_arg["batch_norm"], dropout=m_arg["dropout"], l2=m_arg["l2"])
-        else:
-            m = create_model(batch_norm=m_arg["batch_norm"], dropout=m_arg["dropout"], l2=m_arg["l2"])
-        m.compile(loss="categorical_crossentropy",
-                        optimizer="adam",
-                        metrics=["acc"],
-                        run_eagerly=True)
+    if dt:
+        m = create_time_distributed_model(batch_norm=m_arg["batch_norm"], dropout=m_arg["dropout"], l2=m_arg["l2"])
+    else:
+        m = create_model(batch_norm=m_arg["batch_norm"], dropout=m_arg["dropout"], l2=m_arg["l2"])
+    m.compile(loss="categorical_crossentropy",
+                    optimizer="adam",
+                    metrics=["acc"],
+                    run_eagerly=True)
 
 
-        batch_size = 100
+    batch_size = 100
 
-        history =  m.fit(x=x_tr if not dt else x_tr_p,
-                            y=y_tr,
-                            validation_data=(x_te if not dt else x_te_p, y_te), 
-                            batch_size=batch_size, epochs=100)
-        fig, ax = plt.subplots(1,2)
-        fig.suptitle(title)
-        ax[0].set_title("Loss")
-        ax[0].plot(history.history["loss"],label="Trainging")
-        ax[0].plot(history.history["val_loss"],label="Validation")
-        ax[0].set_xlabel("Epochs")
-        ax[0].set_ylabel("Loss")
-        ax[1].set_title("Image accuracy")
-        ax[1].plot(history.history["acc"],label="Trainging")
-        ax[1].plot(history.history["val_acc"],label="Validation")
-        ax[1].set_xlabel("Epochs")
-        ax[1].set_ylabel("Image Accuracy")
-        ax[1].plot(np.full(len(history.history["acc"]),0.6))
-        fig.tight_layout()
-        plt.legend()
-        filename = title.replace(" ", "")
-        plt.savefig(f"experiments/{filename}.png")
-        plt.close(fig)
-        backend.clear_session()
-        cuda.select_device(0)
-        cuda.close()
+    history =  m.fit(x=x_tr if not dt else x_tr_p,
+                        y=y_tr,
+                        validation_data=(x_te if not dt else x_te_p, y_te), 
+                        batch_size=batch_size, epochs=100)
+    fig, ax = plt.subplots(1,2)
+    fig.suptitle(title)
+    ax[0].set_title("Loss")
+    ax[0].plot(history.history["loss"],label="Trainging")
+    ax[0].plot(history.history["val_loss"],label="Validation")
+    ax[0].set_xlabel("Epochs")
+    ax[0].set_ylabel("Loss")
+    ax[1].set_title("Image accuracy")
+    ax[1].plot(history.history["acc"],label="Trainging")
+    ax[1].plot(history.history["val_acc"],label="Validation")
+    ax[1].set_xlabel("Epochs")
+    ax[1].set_ylabel("Image Accuracy")
+    ax[1].plot(np.full(len(history.history["acc"]),0.6))
+    fig.tight_layout()
+    plt.legend()
+    filename = title.replace(" ", "")
+    plt.savefig(f"experiments/{filename}.png")
+    plt.close(fig)
 
     
