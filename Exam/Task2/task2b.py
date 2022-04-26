@@ -54,7 +54,10 @@ def class_model_visualisation(model,
         tensor = tf.convert_to_tensor(img)
         with tf.GradientTape() as tape:
             tape.watch(tensor)
-            score = model(tensor)[:,class_number]-reg(tensor)
+            if not apply_gausian:
+                score = model(tensor)[:,class_number]-reg(tensor)
+            else:
+                score = model(tensor)[:,class_number]
         print(i, "score: ",score)
         grads = tape.gradient(score, tensor)
         img += learning_rate*grads[0]
@@ -90,10 +93,9 @@ if __name__ == "__main__":
     classes=1000,
     classifier_activation=None)
 
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=200,apply_gausian=False, show_image=True, save_image=False)
+    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=1500,apply_gausian=False, show_image=True, save_image=False)
+    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=1500,apply_gausian=True, show_image=False, save_image=False)
     exit()
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
-
     class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=False, save_image=False)
     class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
 
