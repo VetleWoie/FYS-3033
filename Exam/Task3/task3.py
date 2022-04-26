@@ -26,20 +26,15 @@ def create_model(input_shape=(96,96,3),dropout=False,batch_norm = True, l2=False
     Creates a model after the vgg11 network.
 
     """ 
-
     model = keras.Sequential()
-    convlayers = [64,"pool",128,"pool",256,"batchnorm",256,"pool",512,"batchnorm",512,"pool",512,512,"pool"]
-    if batch_norm:
-        convlayers.append("batchnorm")
+    convlayers = [64,"pool",128,"pool",256,256,"pool",512,512,"pool",512,512,"pool"]
     dense_layers = [4096,4096]
 
-    model.add(layers.Input(shape=input_shape))
+    model.add(layers.InputLayer(input_shape=input_shape))
     #Convolutional layers
     for i,filters in enumerate(convlayers):
         if filters == "pool":
             model.add(layers.MaxPool2D(padding="same", name=f"Pooling_layer_{i}"))
-        elif filters == "batchnorm":
-            model.add(layers.BatchNormalization())
         else:
             model.add(layers.Conv2D(filters=filters,
                                     kernel_size=(3,3), 
@@ -48,6 +43,9 @@ def create_model(input_shape=(96,96,3),dropout=False,batch_norm = True, l2=False
                                     activation="relu",
                                     # input_shape = None if i > 0 else input_shape,
                                     name=f"Conv_layer_{i}"))
+            if batch_norm:
+                model.add(layers.BatchNormalization())
+
     model.add(layers.Flatten())
     for i,nodes in enumerate(dense_layers):
         if dropout:
@@ -60,6 +58,7 @@ def create_model(input_shape=(96,96,3),dropout=False,batch_norm = True, l2=False
             if hasattr(layer, "kernel_regularizer"):
                 layer.kernel_regularizer = regularizers.L2()
     return model
+   
 
 def create_time_distributed_model(input_shape=(4,48,48,3),dropout=False,batch_norm = True, l2=False):
     """
