@@ -195,12 +195,11 @@ def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = Tr
 
     #Create copy of model with guided backpropogation
     if guided:
-        guided_relu_model = keras.models.clone_model(model)
+        guided_relu_model = load_model(softmax=True)
         for layer in guided_relu_model.layers:
             if hasattr(layer, "activation"):
                 if layer.activation == keras.activations.relu:
                     layer.activation = guided_relu
-        guided_relu_model.compile()
 
     #Ugliest for loop in the world
     for uncertainty,(filename,(img, pred)) in zip(uncertainties,zip(filenames,zip(images, preds))):
@@ -241,11 +240,11 @@ def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = Tr
             ax[0][1].table(cellText=pred[:,1:],colLabels=["Predictions", "Score", f"Avarage {k}", f"Uncertainty"], loc='center')      
             unguided_grads = np.max(unguided_grads, axis=3)[0]
             ax[1][0].set_title(f"Unguided backprop")
-            ax[1][0].imshow(np.array(unguided_grads))
+            ax[1][0].imshow(np.array(unguided_grads),cmap="jet")
             if guided:
                 guided_grads = np.max(guided_grads, axis=3)[0]
                 ax[1][1].set_title(f"Guided backprop")
-                ax[1][1].imshow(np.array(guided_grads))
+                ax[1][1].imshow(np.array(guided_grads),cmap="jet")
 
             if savefig:
                 plt.savefig(f"{out_dir}/{filename}_k{k}_saliancy_uncertainty.pdf")
@@ -314,7 +313,7 @@ def class_model_visualisation(model,
 
 if __name__ == "__main__":
     #https://towardsdatascience.com/monte-carlo-dropout-7fd52f8b6571
-    vgg16 = load_model(softmax = False)
+    vgg16 = load_model(softmax = True)
     vgg16.compile()
     print(vgg16.summary())
     # img = class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=250,apply_gausian=False, show_image=False, save_image=True)
