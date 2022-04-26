@@ -9,6 +9,10 @@ from keras import preprocessing
 from keras import layers
 import keras
 import os
+from scipy.ndimage import gaussian_filter
+from keras.regularizers import L2
+
+
 
 PRECODEDIR = "problem2"
 TESTIMAGES = "test_images"
@@ -34,22 +38,6 @@ def load_test_images():
         img = preprocess_input(img)
         x.append(img)
     return np.asarray(x), filenames
-
-def isotropic_reshape(img, shape):
-    #Reshape smallest axis to wanted size
-    if img.size[0] > img.size[1]:
-        relation = shape[1] / img.size[1]
-        new_size = (int(relation * img.size[0]), int(relation * img.size[1]))
-    else:
-        relation = shape[0] / img.size[0]
-        new_size = (int(relation * img.size[0]), int(relation * img.size[1]))
-    img = img.resize(new_size)
-    return img
-
-def create_one_hot(val, max):
-    onehot = np.zeros(max)
-    onehot[val] = 1
-    return onehot.reshape(1,-1)
 
 def load_validation_images(preprocess=False):
     x = []
@@ -95,7 +83,7 @@ def show_validation_images(images, classes, duration = 0.3):
             break
     plt.close(fig)
 
-def load_model():
+def load_model(softmax = True):
     vgg16 = tf.keras.applications.vgg16.VGG16(
     include_top=True,
     weights='imagenet',
@@ -157,7 +145,7 @@ def load_model():
     model.add(layers.Dropout(0.5))
     model.add(layers.Dense(4096, activation='relu', name='fc2'))
     model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(1000, activation="softmax",
+    model.add(layers.Dense(1000, activation="softmax" if softmax else None,
                      name='predictions'))
     
     model.set_weights(vgg16.get_weights())
@@ -232,14 +220,14 @@ def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = Tr
         with tf.GradientTape() as tape:
             tape.watch(tensor)
             score = model(tensor)[:,class_number]
-        unguided_grads = tape.gradient(score, tensor)
+        unguided_grads = np.abs(tape.gradient(score, tensor))
 
         #Compute saliancy maps using guided backpropogation
         if guided:
             with tf.GradientTape() as tape:
                 tape.watch(tensor)
                 score = guided_relu_model(tensor)[:,class_number]
-            guided_grads = tape.gradient(score, tensor)
+            guided_grads = np.abs(tape.gradient(score, tensor))
         #Create figure
         if show or savefig:
             fig, ax = plt.subplots(2,2)
@@ -251,11 +239,11 @@ def compute_saliency_maps(model,k=500, show = False, savefig = True, guided = Tr
             ax[0][1].axis('tight')
             ax[0][1].set_title("Top 5 Class scores")
             ax[0][1].table(cellText=pred[:,1:],colLabels=["Predictions", "Score", f"Avarage {k}", f"Uncertainty"], loc='center')      
-            unguided_grads = np.max(unguided_grads[0], axis=2)
+            unguided_grads = np.max(unguided_grads, axis=3)[0]
             ax[1][0].set_title(f"Unguided backprop")
             ax[1][0].imshow(np.array(unguided_grads))
             if guided:
-                guided_grads = np.max(guided_grads[0], axis=2)
+                guided_grads = np.max(guided_grads, axis=3)[0]
                 ax[1][1].set_title(f"Guided backprop")
                 ax[1][1].imshow(np.array(guided_grads))
 
@@ -278,14 +266,59 @@ def calculate_uncertainty(model, images, k=500):
         data.append((mean, var))
     return data
 
+def class_model_visualisation(model, 
+                            class_number,
+                            num_iterations=1000,
+                            apply_gausian = True,
+                            gausian_step = 5,
+                            show_image=False, 
+                            save_image=True, 
+                            save_dir=".",
+                            reg_class=L2,
+                            learning_rate=1,
+                            reg_param=0.01):
+    # img = np.random.randint(0,255,(1,224,224,3))
+    # img = preprocess_input(img)
+    img = np.zeros((1,224,224,3), dtype=np.float32)
 
+    reg = reg_class(reg_param)
+    for i in range(num_iterations):
+        tensor = tf.convert_to_tensor(img)
+        with tf.GradientTape() as tape:
+            tape.watch(tensor)
+            score = model(tensor)[:,class_number]-reg(tensor)
+        print(i, "score: ",score)
+        grads = tape.gradient(score, tensor)
+        img += learning_rate*grads[0]
+        if apply_gausian:
+            if i % gausian_step == 0:
+                img = gaussian_filter(img, sigma=0.5)
+
+
+    guess = model.predict(img)
+    guess = decode_predictions(guess, top=1)
+    if show_image or save_image:
+        fig, ax = plt.subplots(1,1)
+        new_img = np.array(img[0])
+        new_img += 1
+        new_img *= 127.5
+        new_img = new_img.astype(dtype=int)
+        ax.set_title(f"Guess: {guess}")
+        ax.imshow(new_img)
+        if save_image:
+            gausian_string = "with_gausian" if apply_gausian else ""
+            plt.savefig(f"{save_dir}/{class_number}_visualized_{gausian_string}.pdf")
+        if show_image:
+            plt.show()
+    return new_img
 
 if __name__ == "__main__":
     #https://towardsdatascience.com/monte-carlo-dropout-7fd52f8b6571
-    vgg16 = load_model()
+    vgg16 = load_model(softmax = False)
     vgg16.compile()
     print(vgg16.summary())
+    # img = class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=250,apply_gausian=False, show_image=False, save_image=True)
     # validation_accuracy(vgg16)
     #predict_on_test_image(vgg16)
-    compute_saliency_maps(vgg16,k=10,show=True, savefig=False, guided=True)
+    compute_saliency_maps(vgg16,k=10,show=True, savefig=True, guided=True)
     

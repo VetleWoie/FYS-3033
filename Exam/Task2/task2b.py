@@ -45,19 +45,16 @@ def class_model_visualisation(model,
                             reg_class=L2,
                             learning_rate=1,
                             reg_param=0.01):
-    img = np.random.randint(0,255,(1,224,224,3))
-    img = preprocess_input(img)
-    # img = np.zeros((1,224,224,3), dtype=np.float32)
+    # img = np.random.randint(0,255,(1,224,224,3))
+    # img = preprocess_input(img)
+    img = np.zeros((1,224,224,3), dtype=np.float32)
 
     reg = reg_class(reg_param)
     for i in range(num_iterations):
         tensor = tf.convert_to_tensor(img)
         with tf.GradientTape() as tape:
             tape.watch(tensor)
-            if not apply_gausian:
-                score = model(tensor)[:,class_number]-reg(tensor)
-            else:
-                score = model(tensor)[:,class_number]
+            score = model(tensor)[:,class_number]-reg(tensor)
         print(i, "score: ",score)
         grads = tape.gradient(score, tensor)
         img += learning_rate*grads[0]
@@ -81,6 +78,11 @@ def class_model_visualisation(model,
             plt.savefig(f"{save_dir}/{class_number}_visualized_{gausian_string}.pdf")
         if show_image:
             plt.show()
+    return new_img
+
+def plot_image(img1, img2, class_number):
+    plt.subplots()
+
 
 if __name__ == "__main__":
     
@@ -93,8 +95,8 @@ if __name__ == "__main__":
     classes=1000,
     classifier_activation=None)
 
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=1500,apply_gausian=False, show_image=True, save_image=False)
-    class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=1500,apply_gausian=True, show_image=False, save_image=False)
+    img = class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=250,apply_gausian=False, show_image=False, save_image=True)
+    # img_gaus = class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=250,apply_gausian=True, show_image=False, save_image=True)
     exit()
     class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=False, show_image=False, save_image=False)
     class_model_visualisation(vgg16,215,learning_rate=5,num_iterations=3000,apply_gausian=True, show_image=False, save_image=False)
