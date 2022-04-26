@@ -50,13 +50,16 @@ def create_model(input_shape=(96,96,3),dropout=False,batch_norm = True, l2=False
     for i,nodes in enumerate(dense_layers):
         if dropout:
             model.add(layers.Dropout(0.5,name=f"dropout_{i}"))
-        model.add(layers.Dense(nodes,activation="relu",name=f"fully_connected_{i}"))
+        if l2:
+            model.add(layers.Dense(nodes,activation="relu",name=f"fully_connected_{i}", kernel_regularizer=regularizers.L2()))
+        else:
+            model.add(layers.Dense(nodes,activation="relu",name=f"fully_connected_{i}"))
     model.add(layers.Dense(24, activation="softmax", name="output"))
 
-    if l2:
-        for layer in model.layers:
-            if hasattr(layer, "kernel_regularizer"):
-                layer.kernel_regularizer = regularizers.L2()
+    # if l2:
+    #     for layer in model.layers[:-1]:
+    #         if hasattr(layer, "kernel_regularizer"):
+    #             layer.kernel_regularizer = regularizers.L2()
     return model
    
 
