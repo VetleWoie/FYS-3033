@@ -279,6 +279,7 @@ def class_model_visualisation(model,
     # img = np.random.randint(0,255,(1,224,224,3))
     # img = preprocess_input(img)
     img = np.zeros((1,224,224,3), dtype=np.float32)
+    img_gaus = np.zeros((1,224,224,3), dtype=np.float32)
 
     reg = reg_class(reg_param)
     for i in range(num_iterations):
@@ -289,35 +290,58 @@ def class_model_visualisation(model,
         print(i, "score: ",score)
         grads = tape.gradient(score, tensor)
         img += learning_rate*grads[0]
-        if apply_gausian:
+    
+    if apply_gausian:
+        for i in range(num_iterations):
+            tensor = tf.convert_to_tensor(img_gaus)
+            with tf.GradientTape() as tape:
+                tape.watch(tensor)
+                score = model(tensor)[:,class_number]-reg(tensor)
+            print(i, "score: ",score)
+            grads = tape.gradient(score, tensor)
+            img_gaus += learning_rate*grads[0]
             if i % gausian_step == 0:
-                img = gaussian_filter(img, sigma=0.5)
+                img_gaus = gaussian_filter(img_gaus, sigma=0.5)
 
 
     guess = model.predict(img)
     guess = decode_predictions(guess, top=1)
+    guess_gaus = model.predict(img_gaus)
+    guess_gaus = decode_predictions(guess_gaus, top=1)
+
     if show_image or save_image:
-        fig, ax = plt.subplots(1,1)
+        fig, ax = plt.subplots(1,2)
         new_img = np.array(img[0])
+        new_img_gaus = np.array(img_gaus[0])
         new_img += 1
         new_img *= 127.5
+        new_img_gaus += 1
+        new_img_gaus *= 127.5
         new_img = new_img.astype(dtype=int)
-        ax.set_title(f"Guess: {guess}")
-        ax.imshow(new_img)
+        new_img_gaus = new_img_gaus.astype(dtype=int)
+        ax[0].axis('off')
+        ax[1].axis('off')
+        ax[0].set_title(f"Guess: {guess[0][0][1]} %.2f"%guess[0][0][2])
+        ax[0].imshow(new_img)
+        ax[1].set_title(f"Guess: {guess_gaus[0][0][1]} %.2f"%guess_gaus[0][0][2])
+        ax[1].imshow(new_img_gaus)
         if save_image:
             gausian_string = "with_gausian" if apply_gausian else ""
-            plt.savefig(f"{save_dir}/{class_number}_visualized_{gausian_string}.pdf")
+            plt.savefig(f"{save_dir}/{class_number}_visualized.pdf")
         if show_image:
             plt.show()
-    return new_img
 
 if __name__ == "__main__":
     #https://towardsdatascience.com/monte-carlo-dropout-7fd52f8b6571
-    vgg16 = load_model(softmax = True)
+    vgg16 = load_model(softmax = False)
     vgg16.compile()
     print(vgg16.summary())
-    # img = class_model_visualisation(vgg16,2,learning_rate=5,num_iterations=250,apply_gausian=False, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,2,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,215,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,659,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
+
+
     # validation_accuracy(vgg16)
     #predict_on_test_image(vgg16)
-    compute_saliency_maps(vgg16,k=10,show=True, savefig=True, guided=True)
+    # compute_saliency_maps(vgg16,k=10,show=True, savefig=True, guided=True)
     
