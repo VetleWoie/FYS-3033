@@ -13,6 +13,7 @@ from keras.applications.vgg16 import preprocess_input
 from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.feature_extraction import image
+from sklearn.neighbors import KNeighborsClassifier
 from numba import cuda
 import sys
 
@@ -174,7 +175,8 @@ if __name__ == "__main__":
     history =  m.fit(x=x_tr if not dt else x_tr_p,
                         y=y_tr,
                         validation_data=(x_te if not dt else x_te_p, y_te), 
-                        batch_size=batch_size, epochs=100)
+                        batch_size=batch_size, epochs=50)
+    m.save("model")
     fig, ax = plt.subplots(1,3)
     fig.suptitle(title)
     ax[0].set_title("Loss")
@@ -199,4 +201,37 @@ if __name__ == "__main__":
     plt.savefig(f"experiments/{filename}.png")
     plt.close(fig)
 
+    m = keras.models.load_model("model",custom_objects={"axis_acc": axis_acc})
+
+    #3c:
+    new_model = keras.Sequential()
+    for layer in m.layers[:-5]:
+        new_model.add(layer)
     
+    x_tr, y_tr, x_te, y_te = ld(f"{DATAFOLDER}/{DATANORMAL}")
+    x_tr = np.moveaxis(x_tr,1,3).astype(np.float32)/255
+    x_te = np.moveaxis(x_te,1,3).astype(np.float32)/255 
+
+    #Nearest neighbour on input images
+    x_i_tr = x_tr.reshape(x_tr.shape[0],-1)
+    x_i_te = x_te.reshape(x_te.shape[0],-1)
+    neighbor_classifier = KNeighborsClassifier(3)
+    neighbor_classifier.fit(x_i_tr, y_tr)
+    print("Accuracy on input images",neighbor_classifier.score(x_i_te, y_te))
+
+    #Nearest neighbour on learned features
+    x_lf_tr = new_model.predict(x_tr)
+    x_lf_te = new_model.predict(x_te)
+    print(x_lf_tr.shape)
+    neighbor_classifier = KNeighborsClassifier(3)
+    neighbor_classifier.fit(x_lf_tr, y_tr)
+    print("Accuracy on learned features",neighbor_classifier.score(x_lf_te, y_te))
+    
+    random_model = keras.Sequential()
+    for layer in create_model(batch_norm=True, dropout=True, l2=True).layers[:-5]:
+        random_model.add(layer)
+    x_rf_tr = random_model.predict(x_tr)
+    x_rf_te = random_model.predict(x_te)
+    neighbor_classifier = KNeighborsClassifier(3)
+    neighbor_classifier.fit(x_rf_tr, y_tr)
+    print("Accuracy on random features",neighbor_classifier.score(x_rf_te, y_te))
