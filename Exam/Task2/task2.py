@@ -265,6 +265,10 @@ def calculate_uncertainty(model, images, k=500):
         data.append((mean, var))
     return data
 
+def mapFromTo(x,a,b,c,d):
+   y=(x-a)/(b-a)*(d-c)+c
+   return y
+
 def class_model_visualisation(model, 
                             class_number,
                             num_iterations=1000,
@@ -313,12 +317,11 @@ def class_model_visualisation(model,
         fig, ax = plt.subplots(1,2)
         new_img = np.array(img[0])
         new_img_gaus = np.array(img_gaus[0])
-        new_img += 1
-        new_img *= 127.5
-        new_img_gaus += 1
-        new_img_gaus *= 127.5
-        new_img = new_img.astype(dtype=int)
-        new_img_gaus = new_img_gaus.astype(dtype=int)
+        new_img = mapFromTo(new_img, np.min(new_img), np.max(new_img), 0,1)
+        new_img_gaus = mapFromTo(new_img_gaus, np.min(new_img_gaus), np.max(new_img_gaus), 0,1)
+
+        # new_img = new_img.astype(dtype=int)
+        # new_img_gaus = new_img_gaus.astype(dtype=int)
         ax[0].axis('off')
         ax[1].axis('off')
         ax[0].set_title(f"Guess: {guess[0][0][1]} %.2f"%guess[0][0][2])
@@ -336,9 +339,9 @@ if __name__ == "__main__":
     vgg16 = load_model(softmax = False)
     vgg16.compile()
     print(vgg16.summary())
-    class_model_visualisation(vgg16,2,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
-    class_model_visualisation(vgg16,215,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
-    class_model_visualisation(vgg16,659,learning_rate=1,num_iterations=1000,apply_gausian=True, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,365,learning_rate=5,num_iterations=2000,apply_gausian=True, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,214,learning_rate=5,num_iterations=2000,apply_gausian=True, show_image=False, save_image=True)
+    class_model_visualisation(vgg16,483,learning_rate=5,num_iterations=2000,apply_gausian=True, show_image=False, save_image=True)
 
 
     # validation_accuracy(vgg16)
