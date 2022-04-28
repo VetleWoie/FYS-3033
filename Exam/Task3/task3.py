@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.feature_extraction import image
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.decomposition import PCA
 from numba import cuda
 import sys
 
@@ -158,7 +159,8 @@ if __name__ == "__main__":
                  (1,{"batch_norm":True, "dropout":True,"l2":True},"Time distributed VGG 11 with batchnorm, dropout and l2"),
                 ]
 
-    dt,m_arg, title = model_list[int(sys.argv[1])]
+    # dt,m_arg, title = model_list[int(sys.argv[1])]
+    dt,m_arg, title = model_list[4]
 
     if dt:
         m = create_time_distributed_model(batch_norm=m_arg["batch_norm"], dropout=m_arg["dropout"], l2=m_arg["l2"])
@@ -227,6 +229,7 @@ if __name__ == "__main__":
     neighbor_classifier.fit(x_lf_tr, y_tr)
     print("Accuracy on learned features",neighbor_classifier.score(x_lf_te, y_te))
     
+    #Nearest neighbour on random features
     random_model = keras.Sequential()
     for layer in create_model(batch_norm=True, dropout=True, l2=True).layers[:-5]:
         random_model.add(layer)
@@ -235,3 +238,5 @@ if __name__ == "__main__":
     neighbor_classifier = KNeighborsClassifier(3)
     neighbor_classifier.fit(x_rf_tr, y_tr)
     print("Accuracy on random features",neighbor_classifier.score(x_rf_te, y_te))
+
+   

@@ -344,7 +344,7 @@ if __name__ == "__main__":
     class_model_visualisation(vgg16,483,learning_rate=5,num_iterations=2000,apply_gausian=True, show_image=False, save_image=True)
 
 
-    # validation_accuracy(vgg16)
-    #predict_on_test_image(vgg16)
-    # compute_saliency_maps(vgg16,k=10,show=True, savefig=True, guided=True)
+    validation_accuracy(vgg16)
+    predict_on_test_image(vgg16)
+    compute_saliency_maps(vgg16,k=10,show=True, savefig=True, guided=True)
     
